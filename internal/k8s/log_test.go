@@ -97,3 +97,21 @@ func TestKlogOnlyLogsToLogrus(t *testing.T) {
 	// Assert this file name and some line number as location.
 	assert.Regexp(t, filepath.Base(file)+":[1-9][0-9]*$", entry.Data["location"])
 }
+
+// Last LogWriterOption passed in should be used.
+func TestMultipleLogWriterOptions(t *testing.T) {
+	log, logHook := test.NewNullLogger()
+	logEntry1 := log.WithField("field", "data1")
+	logEntry2 := log.WithField("field", "data2")
+	logEntry3 := log.WithField("field", "data3")
+	InitLogging(LogWriterOption(logEntry1), LogWriterOption(logEntry2), LogWriterOption(logEntry3))
+
+	klog.Info("some log")
+	klog.Flush()
+	assert.Len(t, logHook.AllEntries(), 1)
+	assert.Equal(t, "data3", logHook.AllEntries()[0].Data["field"])
+}
+
+// test log levels
+
+// test last log level set is used
