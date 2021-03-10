@@ -50,64 +50,59 @@ func (p *IngressProcessor) Run(dag *DAG, source *KubernetesCache) {
 		p.source = nil
 	}()
 
-	// setup secure vhosts if there is a matching secret
-	// we do this first so that the set of active secure vhosts is stable
-	// during computeIngresses.
-	p.computeSecureVirtualhosts()
 	p.computeIngresses()
 }
 
-// computeSecureVirtualhosts populates tls parameters of
-// secure virtual hosts.
-func (p *IngressProcessor) computeSecureVirtualhosts() {
-	for _, ing := range p.source.ingresses {
-		for _, tls := range ing.Spec.TLS {
-			secretName := k8s.NamespacedNameFrom(tls.SecretName, k8s.DefaultNamespace(ing.GetNamespace()))
-			sec, err := p.source.LookupSecret(secretName, validSecret)
-			if err != nil {
-				p.WithError(err).
-					WithField("name", ing.GetName()).
-					WithField("namespace", ing.GetNamespace()).
-					WithField("secret", secretName).
-					Error("unresolved secret reference")
-				continue
-			}
+// collectSecretsPerHost takes an Ingress, validates TLS settings have valid
+// Secrets and certificate delegation, and returns a map of hosts to
+// a further mapping of name to secret to ensure de-duplication
+func (p *IngressProcessor) collectSecretsPerHost(ing *networking_v1.Ingress) map[string]*Secret {
+	secretsPerHost := make(map[string]*Secret)
+	for _, tls := range ing.Spec.TLS {
+		secretName := k8s.NamespacedNameFrom(tls.SecretName, k8s.DefaultNamespace(ing.GetNamespace()))
 
-			if !p.source.DelegationPermitted(secretName, ing.GetNamespace()) {
-				p.WithError(err).
-					WithField("name", ing.GetName()).
-					WithField("namespace", ing.GetNamespace()).
-					WithField("secret", secretName).
-					Error("certificate delegation not permitted")
-				continue
-			}
+		sec, err := p.source.LookupSecret(secretName, validSecret)
+		if err != nil {
+			p.WithError(err).
+				WithField("name", ing.GetName()).
+				WithField("namespace", ing.GetNamespace()).
+				WithField("secret", secretName).
+				Error("unresolved secret reference")
+			continue
+		}
 
-			// We have validated the TLS secrets, so we can go
-			// ahead and create the SecureVirtualHost for this
-			// Ingress.
-			for _, host := range tls.Hosts {
-				svhost := p.dag.EnsureSecureVirtualHost(host)
-				svhost.Secret = sec
-				// default to a minimum TLS version of 1.2 if it's not specified
-				svhost.MinTLSVersion = annotation.MinTLSVersion(annotation.ContourAnnotation(ing, "tls-minimum-protocol-version"), "1.2")
-			}
+		if !p.source.DelegationPermitted(secretName, ing.GetNamespace()) {
+			p.WithError(err).
+				WithField("name", ing.GetName()).
+				WithField("namespace", ing.GetNamespace()).
+				WithField("secret", secretName).
+				Error("certificate delegation not permitted")
+			continue
+		}
+
+		for _, host := range tls.Hosts {
+			// TODO: Support multiple secrets per host. Right now the last
+			// secret that references a particular host will be the only
+			// one set.
+			secretsPerHost[host] = sec
 		}
 	}
+	return secretsPerHost
 }
 
 func (p *IngressProcessor) computeIngresses() {
 	// deconstruct each ingress into routes and virtualhost entries
 	for _, ing := range p.source.ingresses {
-
+		secretsPerHost := p.collectSecretsPerHost(ing)
 		// rewrite the default ingress to a stock ingress rule.
 		rules := rulesFromSpec(ing.Spec)
 		for _, rule := range rules {
-			p.computeIngressRule(ing, rule)
+			p.computeIngressRule(ing, rule, secretsPerHost)
 		}
 	}
 }
 
-func (p *IngressProcessor) computeIngressRule(ing *networking_v1.Ingress, rule networking_v1.IngressRule) {
+func (p *IngressProcessor) computeIngressRule(ing *networking_v1.Ingress, rule networking_v1.IngressRule, secretsPerHost map[string]*Secret) {
 	host := rule.Host
 	if strings.Contains(host, "*") {
 		// reject hosts with wildcard characters.
@@ -170,11 +165,20 @@ func (p *IngressProcessor) computeIngressRule(ing *networking_v1.Ingress, rule n
 			vhost.addRoute(r)
 		}
 
-		// computeSecureVirtualhosts will have populated b.securevirtualhosts
-		// with the names of tls enabled ingress objects. If host exists then
-		// it is correctly configured for TLS.
-		if svh := p.dag.GetSecureVirtualHost(host); svh != nil && host != "*" {
-			svh.addRoute(r)
+		// Do not add secure virtualhost for the "any" wildcard host.
+		if host != "*" {
+			if secret, found := secretsPerHost[host]; found {
+				// Add secure virtualhost if there is a secret for the host
+				// within this Ingress.
+				svh := p.dag.EnsureSecureVirtualHost(host)
+				svh.Secret = secret
+				// default to a minimum TLS version of 1.2 if it's not specified
+				svh.MinTLSVersion = annotation.MinTLSVersion(annotation.ContourAnnotation(ing, "tls-minimum-protocol-version"), "1.2")
+				svh.addRoute(r)
+			} else if svh := p.dag.GetSecureVirtualHost(host); svh != nil {
+				// Allow overlaying this route on an existing secure virtualhost.
+				svh.addRoute(r)
+			}
 		}
 	}
 }
@@ -212,13 +216,14 @@ func route(ingress *networking_v1.Ingress, path string, service *Service, client
 	return r, nil
 }
 
-// rulesFromSpec merges the IngressSpec's Rules with a synthetic
-// rule representing the default backend.
+// rulesFromSpec merges the IngressSpec's Rules with a synthetic rule
+// representing the default backend. The default backend rule is prepended
+// so subsequent rules can override it.
 func rulesFromSpec(spec networking_v1.IngressSpec) []networking_v1.IngressRule {
 	rules := spec.Rules
 	if backend := spec.DefaultBackend; backend != nil {
 		rule := defaultBackendRule(backend)
-		rules = append(rules, rule)
+		rules = append([]networking_v1.IngressRule{rule}, rules...)
 	}
 	return rules
 }

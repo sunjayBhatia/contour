@@ -5850,6 +5850,30 @@ func TestDAGInsert(t *testing.T) {
 				},
 			),
 		},
+		"insert ingress overlay reverse order": {
+			objs: []interface{}{
+				i13b, i13a, sec13, s13a, s13b,
+			},
+			want: listeners(
+				&Listener{
+					Port: 80,
+					VirtualHosts: virtualhosts(
+						virtualhost("example.com",
+							routeUpgrade("/", service(s13a)),
+							prefixroute("/.well-known/acme-challenge/gVJl5NWL2owUqZekjHkt_bo3OHYC2XNDURRRgLI5JTk", service(s13b)),
+						),
+					),
+				}, &Listener{
+					Port: 443,
+					VirtualHosts: virtualhosts(
+						securevirtualhost("example.com", sec13,
+							routeUpgrade("/", service(s13a)),
+							prefixroute("/.well-known/acme-challenge/gVJl5NWL2owUqZekjHkt_bo3OHYC2XNDURRRgLI5JTk", service(s13b)),
+						),
+					),
+				},
+			),
+		},
 		"h2c service annotation": {
 			objs: []interface{}{
 				i3a, s3a,
@@ -7368,6 +7392,62 @@ func TestDAGInsert(t *testing.T) {
 					Port: 80,
 					VirtualHosts: virtualhosts(
 						virtualhost("example.com", prefixroute("/", service(s2a))),
+					),
+				},
+			),
+		},
+		"ingressv1: Ingress with secret host that does not match any rules and later ingress with that host": {
+			objs: []interface{}{
+				s1,
+				sec1,
+				sec3,
+				&networking_v1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kuard",
+						Namespace: "default",
+					},
+					Spec: networking_v1.IngressSpec{
+						TLS: []networking_v1.IngressTLS{
+							{
+								Hosts:      []string{"should-not-be-tls.com"},
+								SecretName: sec1.Name,
+							},
+							{
+								Hosts:      []string{"example.com"},
+								SecretName: sec3.Name,
+							},
+						},
+						Rules: []networking_v1.IngressRule{{
+							Host:             "example.com",
+							IngressRuleValue: ingressrulev1value(backendv1("kuard", intstr.FromInt(8080))),
+						}},
+					},
+				},
+				&networking_v1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "other",
+						Namespace: "default",
+					},
+					Spec: networking_v1.IngressSpec{
+						Rules: []networking_v1.IngressRule{{
+							Host:             "should-not-be-tls.com",
+							IngressRuleValue: ingressrulev1value(backendv1("kuard", intstr.FromInt(8080))),
+						}},
+					},
+				},
+			},
+			want: listeners(
+				&Listener{
+					Port: 80,
+					VirtualHosts: virtualhosts(
+						virtualhost("example.com", prefixroute("/", service(s1))),
+						virtualhost("should-not-be-tls.com", prefixroute("/", service(s1))),
+					),
+				},
+				&Listener{
+					Port: 443,
+					VirtualHosts: virtualhosts(
+						securevirtualhost("example.com", sec3, prefixroute("/", service(s1))),
 					),
 				},
 			),
