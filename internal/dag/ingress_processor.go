@@ -99,15 +99,19 @@ func (p *IngressProcessor) computeIngresses() {
 	// deconstruct each ingress into routes and virtualhost entries
 	for _, ing := range p.source.ingresses {
 
-		// rewrite the default ingress to a stock ingress rule.
-		rules := rulesFromSpec(ing.Spec)
-		for _, rule := range rules {
-			p.computeIngressRule(ing, rule)
+		// Rewrite the default ingress to a stock ingress rule and process
+		// it first so it can be overridden. Will not override existing
+		// routes that it would conflict with if present.
+		if backend := ing.Spec.DefaultBackend; backend != nil {
+			p.computeIngressRule(ing, defaultBackendRule(backend), false)
+		}
+		for _, rule := range ing.Spec.Rules {
+			p.computeIngressRule(ing, rule, true)
 		}
 	}
 }
 
-func (p *IngressProcessor) computeIngressRule(ing *networking_v1.Ingress, rule networking_v1.IngressRule) {
+func (p *IngressProcessor) computeIngressRule(ing *networking_v1.Ingress, rule networking_v1.IngressRule, overrideMatchingRules bool) {
 	host := rule.Host
 	if strings.Contains(host, "*") {
 		// reject hosts with wildcard characters.
@@ -167,14 +171,22 @@ func (p *IngressProcessor) computeIngressRule(ing *networking_v1.Ingress, rule n
 		// should we create port 80 routes for this ingress
 		if annotation.TLSRequired(ing) || annotation.HTTPAllowed(ing) {
 			vhost := p.dag.EnsureVirtualHost(host)
-			vhost.addRoute(r)
+			if overrideMatchingRules {
+				vhost.addRouteOverride(r)
+			} else {
+				vhost.addRouteIfNotExists(r)
+			}
 		}
 
 		// computeSecureVirtualhosts will have populated b.securevirtualhosts
 		// with the names of tls enabled ingress objects. If host exists then
 		// it is correctly configured for TLS.
 		if svh := p.dag.GetSecureVirtualHost(host); svh != nil && host != "*" {
-			svh.addRoute(r)
+			if overrideMatchingRules {
+				svh.addRouteOverride(r)
+			} else {
+				svh.addRouteIfNotExists(r)
+			}
 		}
 	}
 }
@@ -210,18 +222,6 @@ func route(ingress *networking_v1.Ingress, path string, service *Service, client
 
 	r.PathMatchCondition = &PrefixMatchCondition{Prefix: path}
 	return r, nil
-}
-
-// rulesFromSpec merges the IngressSpec's Rules with a synthetic
-// rule representing the default backend.
-// Prepend the default backend so it can be overridden by later rules.
-func rulesFromSpec(spec networking_v1.IngressSpec) []networking_v1.IngressRule {
-	rules := spec.Rules
-	if backend := spec.DefaultBackend; backend != nil {
-		rule := defaultBackendRule(backend)
-		rules = append([]networking_v1.IngressRule{rule}, rules...)
-	}
-	return rules
 }
 
 // defaultBackendRule returns an IngressRule that represents the IngressBackend.

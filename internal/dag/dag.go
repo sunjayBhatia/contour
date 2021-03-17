@@ -401,11 +401,25 @@ type VirtualHost struct {
 	routes map[string]*Route
 }
 
-func (v *VirtualHost) addRoute(route *Route) {
+// addRouteOverride adds a route to a virtualhost and overrides any
+// existing route that has the same match conditions
+func (v *VirtualHost) addRouteOverride(route *Route) {
 	if v.routes == nil {
 		v.routes = make(map[string]*Route)
 	}
 	v.routes[conditionsToString(route)] = route
+}
+
+// addRouteIfNotExists adds a route to a virtualhost if one does not
+// already exist with the same match conditions
+func (v *VirtualHost) addRouteIfNotExists(route *Route) {
+	if v.routes == nil {
+		v.routes = make(map[string]*Route)
+	}
+	routeKey := conditionsToString(route)
+	if _, ok := v.routes[routeKey]; !ok {
+		v.routes[routeKey] = route
+	}
 }
 
 func conditionsToString(r *Route) string {

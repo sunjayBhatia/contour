@@ -340,13 +340,13 @@ func (p *HTTPProxyProcessor) computeHTTPProxy(proxy *contour_api_v1.HTTPProxy) {
 }
 
 type vhost interface {
-	addRoute(*Route)
+	addRouteOverride(*Route)
 }
 
 // addRoutes adds all routes to the vhost supplied.
 func addRoutes(vhost vhost, routes []*Route) {
 	for _, route := range routes {
-		vhost.addRoute(route)
+		vhost.addRouteOverride(route)
 	}
 }
 

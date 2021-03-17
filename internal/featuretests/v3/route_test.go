@@ -951,6 +951,37 @@ func TestDefaultBackendIsOverriddenByNoHostIngressRule(t *testing.T) {
 		TypeUrl: routeType,
 		Nonce:   "1",
 	})
+
+	// Adding another Ingress with a default backend should not override the
+	// previously specified rule.
+	rh.OnAdd(&v1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "goodbye",
+			Namespace: "default",
+		},
+		Spec: v1beta1.IngressSpec{
+			Backend: &v1beta1.IngressBackend{
+				ServiceName: "kuard",
+				ServicePort: intstr.FromInt(80),
+			},
+		},
+	})
+
+	c.Request(routeType).Equals(&envoy_discovery_v3.DiscoveryResponse{
+		VersionInfo: "1",
+		Resources: routeResources(t,
+			envoy_v3.RouteConfiguration("ingress_http",
+				envoy_v3.VirtualHost("*",
+					&envoy_route_v3.Route{
+						Match:  routePrefix("/"),
+						Action: routecluster("default/kuard/8080/da39a3ee5e"),
+					},
+				),
+			),
+		),
+		TypeUrl: routeType,
+		Nonce:   "1",
+	})
 }
 
 // Test DAGAdapter.IngressClass setting works, this could be done

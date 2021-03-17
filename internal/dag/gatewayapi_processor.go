@@ -173,7 +173,7 @@ func (p *GatewayAPIProcessor) computeHTTPRoute(route *gatewayapi_v1alpha1.HTTPRo
 		for _, vhost := range hosts {
 			vhost := p.dag.EnsureVirtualHost(vhost)
 			for _, route := range routes {
-				vhost.addRoute(route)
+				vhost.addRouteOverride(route)
 			}
 		}
 	}
