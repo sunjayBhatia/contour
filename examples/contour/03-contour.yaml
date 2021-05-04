@@ -38,8 +38,14 @@ spec:
       - args:
         - serve
         - --incluster
-        - --xds-address=0.0.0.0
+        - '--xds-address=::'
         - --xds-port=8001
+        - '--stats-address=::'
+        - '--debug-http-address=::1'
+        - '--http-address=::'
+        - '--envoy-service-http-address=::'
+        - '--envoy-service-https-address=::'
+        - '--health-address=::'
         - --contour-cafile=/certs/ca.crt
         - --contour-cert-file=/certs/tls.crt
         - --contour-key-file=/certs/tls.key

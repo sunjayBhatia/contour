@@ -50,7 +50,7 @@ spec:
         - /config/envoy.json
         - --service-cluster $(CONTOUR_NAMESPACE)
         - --service-node $(ENVOY_POD_NAME)
-        - --log-level info
+        - --log-level debug
         command:
         - envoy
         image: docker.io/envoyproxy/envoy:v1.18.2
@@ -99,6 +99,7 @@ spec:
       - args:
         - bootstrap
         - /config/envoy.json
+        - --admin-address=::1
         - --xds-address=contour
         - --xds-port=8001
         - --xds-resource-version=v3

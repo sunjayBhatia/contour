@@ -2960,8 +2960,14 @@ spec:
       - args:
         - serve
         - --incluster
-        - --xds-address=0.0.0.0
+        - '--xds-address=::'
         - --xds-port=8001
+        - '--stats-address=::'
+        - '--debug-http-address=::1'
+        - '--http-address=::'
+        - '--envoy-service-http-address=::'
+        - '--envoy-service-https-address=::'
+        - '--health-address=::'
         - --contour-cafile=/certs/ca.crt
         - --contour-cert-file=/certs/tls.crt
         - --contour-key-file=/certs/tls.key
@@ -3077,7 +3083,7 @@ spec:
         - /config/envoy.json
         - --service-cluster $(CONTOUR_NAMESPACE)
         - --service-node $(ENVOY_POD_NAME)
-        - --log-level info
+        - --log-level debug
         command:
         - envoy
         image: docker.io/envoyproxy/envoy:v1.18.2
@@ -3126,6 +3132,7 @@ spec:
       - args:
         - bootstrap
         - /config/envoy.json
+        - --admin-address=::1
         - --xds-address=contour
         - --xds-port=8001
         - --xds-resource-version=v3

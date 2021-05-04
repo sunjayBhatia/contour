@@ -44,7 +44,8 @@ spec:
             - name: REDIS_URL
               value: redis:6379
         - name: ratelimit
-          image: docker.io/envoyproxy/ratelimit:6f5de117  # latest a/o Jan 22 2021
+          image: envoyproxy/ratelimit:c03723f3  # latest a/o Mar 30 2021
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http
@@ -64,7 +65,13 @@ spec:
             - name: REDIS_SOCKET_TYPE
               value: tcp
             - name: REDIS_URL
-              value: localhost:6379
+              value: '[::1]:6379'
+            - name: HOST
+              value: '::'
+            - name: GRPC_HOST
+              value: '::'
+            - name: DEBUG_HOST
+              value: '::'
             - name: RUNTIME_ROOT
               value: /data
             - name: RUNTIME_SUBDIRECTORY
