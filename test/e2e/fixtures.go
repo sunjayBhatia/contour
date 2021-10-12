@@ -314,6 +314,9 @@ func DefaultContourConfiguration() *contour_api_v1alpha1.ContourConfiguration {
 			Namespace: "projectcontour",
 		},
 		Spec: contour_api_v1alpha1.ContourConfigurationSpec{
+			XDSServer: contour_api_v1alpha1.XDSServerConfig{
+				Type: contour_api_v1alpha1.EnvoyServerType,
+			},
 			Debug: contour_api_v1alpha1.DebugConfig{
 				Address:                 "127.0.0.1",
 				Port:                    6060,

@@ -81,7 +81,6 @@ var _ = Describe("Gateway API", func() {
 					}
 
 					// Update contour configuration to point to specified gateway.
-					contourConfiguration = e2e.DefaultContourConfiguration()
 					contourConfiguration.Spec.Gateway = &contour_api_v1alpha1.GatewayConfig{
 						ControllerName: string(gatewayClass.Spec.ControllerName),
 					}
@@ -101,7 +100,13 @@ var _ = Describe("Gateway API", func() {
 	BeforeEach(func() {
 		// Contour config file contents, can be modified in nested
 		// BeforeEach.
-		contourConfig = &config.Parameters{}
+		contourConfig = &config.Parameters{
+			Server: config.ServerParameters{
+				XDSServerType: "envoy",
+			},
+		}
+
+		contourConfiguration = e2e.DefaultContourConfiguration()
 
 		// Default contour serve command line arguments can be appended to in
 		// nested BeforeEach.

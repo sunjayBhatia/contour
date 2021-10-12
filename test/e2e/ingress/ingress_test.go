@@ -65,7 +65,11 @@ var _ = Describe("Ingress", func() {
 	BeforeEach(func() {
 		// Contour config file contents, can be modified in nested
 		// BeforeEach.
-		contourConfig = &config.Parameters{}
+		contourConfig = &config.Parameters{
+			Server: config.ServerParameters{
+				XDSServerType: "envoy",
+			},
+		}
 
 		contourConfiguration = e2e.DefaultContourConfiguration()
 
