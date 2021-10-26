@@ -14,6 +14,7 @@
 package xdscache
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"strconv"
@@ -47,10 +48,12 @@ type SnapshotHandler struct {
 
 // NewSnapshotHandler returns an instance of SnapshotHandler.
 func NewSnapshotHandler(resources []ResourceCache, logger logrus.FieldLogger) *SnapshotHandler {
-	return &SnapshotHandler{
+	sh := &SnapshotHandler{
 		resources:   parseResources(resources),
 		FieldLogger: logger,
 	}
+	// sh.generateNewSnapshot()
+	return sh
 }
 
 func (s *SnapshotHandler) AddSnapshotter(snap Snapshotter) {
@@ -63,11 +66,13 @@ func (s *SnapshotHandler) AddSnapshotter(snap Snapshotter) {
 // Refresh is called when the EndpointsTranslator updates values
 // in its cache.
 func (s *SnapshotHandler) Refresh() {
+	fmt.Println("SnapshotHandler Refresh")
 	s.generateNewSnapshot()
 }
 
 // OnChange is called when the DAG is rebuilt and a new snapshot is needed.
 func (s *SnapshotHandler) OnChange(root *dag.DAG) {
+	fmt.Println("SnapshotHandler OnChange")
 	s.generateNewSnapshot()
 }
 
@@ -76,6 +81,8 @@ func (s *SnapshotHandler) OnChange(root *dag.DAG) {
 func (s *SnapshotHandler) generateNewSnapshot() {
 	// Generate new snapshot version.
 	version := s.newSnapshotVersion()
+
+	fmt.Println("generating snapshot with version:", version)
 
 	resources := map[envoy_types.ResponseType][]envoy_types.Resource{
 		envoy_types.Endpoint: asResources(s.resources[envoy_types.Endpoint].Contents()),
@@ -130,6 +137,8 @@ func asResources(messages interface{}) []envoy_types.Resource {
 // parseResources converts an []ResourceCache to a map[envoy_types.ResponseType]ResourceCache
 // for faster indexing when creating new snapshots.
 func parseResources(resources []ResourceCache) map[envoy_types.ResponseType]ResourceCache {
+	fmt.Println("parse resources started")
+	defer fmt.Println("parse resources done")
 	resourceMap := make(map[envoy_types.ResponseType]ResourceCache, len(resources))
 
 	for _, r := range resources {

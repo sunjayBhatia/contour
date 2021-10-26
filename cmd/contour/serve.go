@@ -590,6 +590,9 @@ func (s *Server) setupXDSServer(mgr manager.Manager, registry *prometheus.Regist
 			v3cache := contour_xds_v3.NewSnapshotCache(false, log)
 			snapshotHandler.AddSnapshotter(v3cache)
 			contour_xds_v3.RegisterServer(envoy_server_v3.NewServer(taskCtx, v3cache, contour_xds_v3.NewRequestLoggingCallbacks(log)), grpcServer)
+			log.Printf("envoy xDS server registered")
+			// Seed the snapshot cache with some content so the xDS server can respond immediately to requests.
+			snapshotHandler.Refresh()
 		case contour_api_v1alpha1.ContourServerType:
 			contour_xds_v3.RegisterServer(contour_xds_v3.NewContourServer(log, xdscache.ResourcesOf(resources)...), grpcServer)
 		default:

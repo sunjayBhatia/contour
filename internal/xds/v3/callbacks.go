@@ -14,6 +14,7 @@
 package v3
 
 import (
+	"context"
 	"fmt"
 
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
@@ -27,6 +28,10 @@ import (
 // OnStreamRequest is implemented.
 func NewRequestLoggingCallbacks(log logrus.FieldLogger) envoy_server_v3.Callbacks {
 	return &envoy_server_v3.CallbackFuncs{
+		StreamOpenFunc: func(ctx context.Context, streamID int64, typeURL string) error {
+			log.WithFields(logrus.Fields{"stream_id": streamID, "type_url": typeURL}).Debug("stream_open_func")
+			return nil
+		},
 		StreamRequestFunc: func(streamID int64, req *envoy_service_discovery_v3.DiscoveryRequest) error {
 			logDiscoveryRequestDetails(log, req)
 			return nil

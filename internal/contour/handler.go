@@ -17,6 +17,7 @@
 package contour
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -137,6 +138,7 @@ func (e *EventHandler) run(stop <-chan struct{}) error {
 		select {
 		case op := <-e.update:
 			if e.onUpdate(op) {
+				fmt.Println("handler onUpdate fired")
 				outstanding++
 				// If there is already a timer running, stop it.
 				if timer != nil {
@@ -157,6 +159,7 @@ func (e *EventHandler) run(stop <-chan struct{}) error {
 				e.incSequence()
 			}
 		case <-pending:
+			fmt.Println("rebuilding dag")
 			e.WithField("last_update", time.Since(lastDAGRebuild)).WithField("outstanding", reset()).Info("performing delayed update")
 			e.rebuildDAG()
 			e.incSequence()

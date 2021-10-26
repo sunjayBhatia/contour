@@ -71,6 +71,7 @@ var _ = Describe("HTTPProxy", func() {
 			Server: config.ServerParameters{
 				XDSServerType: "envoy",
 			},
+			Debug: true,
 		}
 
 		// Contour configuration crd, can be modified in nested
