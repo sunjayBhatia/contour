@@ -58,7 +58,7 @@ var _ = AfterSuite(func() {
 	// Delete resources individually instead of deleting the entire contour
 	// namespace as a performance optimization, because deleting non-empty
 	// namespaces can take up to a couple minutes to complete.
-	require.NoError(f.T(), f.Deployment.DeleteResourcesForInclusterContour())
+	// require.NoError(f.T(), f.Deployment.DeleteResourcesForInclusterContour())
 })
 
 var _ = Describe("Incluster", func() {
@@ -104,4 +104,6 @@ var _ = Describe("Incluster", func() {
 	f.NamespacedTest("projectcontour-resource-rbac", testProjectcontourResourcesRBAC)
 
 	f.NamespacedTest("ingress-resource-rbac", testIngressResourceRBAC)
+
+	f.NamespacedTest("contour-restart-envoy-reconnect", testEnvoyReconnect)
 })

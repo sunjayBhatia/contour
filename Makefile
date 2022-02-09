@@ -293,7 +293,7 @@ e2e: | setup-kind-cluster load-contour-image-kind run-e2e cleanup-kind ## Run E2
 run-e2e:
 	CONTOUR_E2E_LOCAL_HOST=$(CONTOUR_E2E_LOCAL_HOST) \
 		CONTOUR_E2E_IMAGE=$(CONTOUR_E2E_IMAGE) \
-		ginkgo -tags=e2e -mod=readonly -skip-package=upgrade,bench -keep-going -randomize-suites -randomize-all -slow-spec-threshold=120s -r ./test/e2e
+		ginkgo -tags=e2e -mod=readonly -skip-package=upgrade,bench -keep-going -randomize-suites -randomize-all -slow-spec-threshold=120s -r -v ./test/e2e/incluster
 
 .PHONY: cleanup-kind
 cleanup-kind:

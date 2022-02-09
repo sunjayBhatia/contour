@@ -5138,6 +5138,7 @@ spec:
         - --contour-cert-file=/certs/tls.crt
         - --contour-key-file=/certs/tls.key
         - --config-path=/config/contour.yaml
+        - --debug
         command: ["contour"]
         image: ghcr.io/projectcontour/contour:main
         imagePullPolicy: IfNotPresent

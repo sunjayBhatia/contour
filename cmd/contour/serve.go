@@ -15,7 +15,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -177,12 +176,36 @@ type Server struct {
 // NewServer returns a Server object which contains the initial configuration
 // objects required to start an instance of Contour.
 func NewServer(log logrus.FieldLogger, ctx *serveContext) (*Server, error) {
-
 	// Establish k8s core client connection.
 	restConfig, err := k8s.NewRestConfig(ctx.Config.Kubeconfig, ctx.Config.InCluster)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create REST config for Kubernetes clients: %w", err)
 	}
+
+	configQPS := os.Getenv("K8S_CLIENT_QPS")
+	if configQPS == "" {
+		configQPS = "0"
+	}
+
+	configBurst := os.Getenv("K8S_CLIENT_BURST")
+	if configBurst == "" {
+		configBurst = "0"
+	}
+
+	qps, err := strconv.ParseFloat(configQPS, 32)
+	if err != nil {
+		return nil, err
+	}
+
+	burst, err := strconv.Atoi(configBurst)
+	if err != nil {
+		return nil, err
+	}
+
+	restConfig.QPS = float32(qps)
+	restConfig.Burst = burst
+
+	log.WithField("restConfig", restConfig).Info("rest config for k8s client")
 
 	coreClient, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
@@ -386,9 +409,6 @@ func (s *Server) doServe() error {
 	}
 
 	sh := k8s.NewStatusUpdateHandler(s.log.WithField("context", "StatusUpdateHandler"), s.mgr.GetClient())
-	if err := s.mgr.Add(sh); err != nil {
-		return err
-	}
 
 	builder := s.getDAGBuilder(dagBuilderConfig{
 		ingressClassNames:         ingressClassNames,
@@ -415,6 +435,8 @@ func (s *Server) doServe() error {
 		Observer:        observer,
 		StatusUpdater:   sh.Writer(),
 		Builder:         builder,
+
+		Manager: s.mgr,
 	})
 
 	// Wrap contourHandler in an EventRecorder which tracks API server events.
@@ -460,24 +482,20 @@ func (s *Server) doServe() error {
 		s.log.WithError(err).WithField("resource", "endpoints").Fatal("failed to create informer")
 	}
 
-	// Register our event handler with the manager.
-	if err := s.mgr.Add(contourHandler); err != nil {
-		return err
-	}
-
 	// Create metrics service.
-	if err := s.setupMetrics(contourConfiguration.Metrics, contourConfiguration.Health, s.registry); err != nil {
-		return err
-	}
+	metricsSvc := s.setupMetrics(contourConfiguration.Metrics, contourConfiguration.Health, s.registry)
 
 	// Create a separate health service if required.
-	if err := s.setupHealth(contourConfiguration.Health, contourConfiguration.Metrics); err != nil {
-		return err
-	}
+	healthSvc := s.setupHealth(contourConfiguration.Health, contourConfiguration.Metrics)
 
 	// Create debug service and register with workgroup.
-	if err := s.setupDebugService(contourConfiguration.Debug, builder); err != nil {
-		return err
+	debugSvc := &debug.Service{
+		Service: httpsvc.Service{
+			Addr:        contourConfiguration.Debug.Address,
+			Port:        contourConfiguration.Debug.Port,
+			FieldLogger: s.log.WithField("context", "debugsvc"),
+		},
+		Builder: builder,
 	}
 
 	var gatewayControllerName string
@@ -493,9 +511,6 @@ func (s *Server) doServe() error {
 		ingressClassNames:     ingressClassNames,
 		gatewayControllerName: gatewayControllerName,
 		statusUpdater:         sh.Writer(),
-	}
-	if err := s.mgr.Add(lbsw); err != nil {
-		return err
 	}
 
 	// Register an informer to watch envoy's service if we haven't been given static details.
@@ -530,9 +545,7 @@ func (s *Server) doServe() error {
 		config:          contourConfiguration.XDSServer,
 		snapshotHandler: snapshotHandler,
 		resources:       resources,
-	}
-	if err := s.mgr.Add(xdsServer); err != nil {
-		return err
+		ready:           make(chan struct{}),
 	}
 
 	notifier := &leadership.Notifier{
@@ -541,12 +554,23 @@ func (s *Server) doServe() error {
 			observer,
 		}, needsNotification...),
 	}
-	if err := s.mgr.Add(notifier); err != nil {
-		return err
+
+	unorderedRunnables := []manager.Runnable{
+		notifier,
+		metricsSvc,
+		debugSvc,
+		lbsw,
+		sh,
+	}
+	if healthSvc != nil {
+		unorderedRunnables = append(unorderedRunnables, healthSvc)
 	}
 
-	// GO!
-	return s.mgr.Start(signals.SetupSignalHandler())
+	orderedRunnables := []NotifyReadyRunnable{
+		contourHandler,
+		xdsServer,
+	}
+	return StartManager(signals.SetupSignalHandler(), s.mgr, unorderedRunnables, orderedRunnables)
 }
 
 func (s *Server) setupRateLimitService(contourConfiguration contour_api_v1alpha1.ContourConfigurationSpec) (*xdscache_v3.RateLimitConfig, error) {
@@ -587,18 +611,6 @@ func (s *Server) setupRateLimitService(contourConfiguration contour_api_v1alpha1
 	}, nil
 }
 
-func (s *Server) setupDebugService(debugConfig contour_api_v1alpha1.DebugConfig, builder *dag.Builder) error {
-	debugsvc := &debug.Service{
-		Service: httpsvc.Service{
-			Addr:        debugConfig.Address,
-			Port:        debugConfig.Port,
-			FieldLogger: s.log.WithField("context", "debugsvc"),
-		},
-		Builder: builder,
-	}
-	return s.mgr.Add(debugsvc)
-}
-
 type xdsServer struct {
 	log             logrus.FieldLogger
 	mgr             manager.Manager
@@ -606,20 +618,25 @@ type xdsServer struct {
 	config          contour_api_v1alpha1.XDSServerConfig
 	snapshotHandler *xdscache.SnapshotHandler
 	resources       []xdscache.ResourceCache
+	ready           chan struct{}
 }
 
 func (x *xdsServer) NeedLeaderElection() bool {
 	return false
 }
 
+func (x *xdsServer) IsReady() <-chan struct{} {
+	return x.ready
+}
+
 func (x *xdsServer) Start(ctx context.Context) error {
 	log := x.log.WithField("context", "xds")
 
-	log.Printf("waiting for informer caches to sync")
-	if !x.mgr.GetCache().WaitForCacheSync(ctx) {
-		return errors.New("informer cache failed to sync")
-	}
-	log.Printf("informer caches synced")
+	// log.Printf("waiting for informer caches to sync")
+	// if !x.mgr.GetCache().WaitForCacheSync(ctx) {
+	// 	return errors.New("informer cache failed to sync")
+	// }
+	// log.Printf("informer caches synced")
 
 	grpcServer := xds.NewServer(x.registry, grpcOptions(log, x.config.TLS)...)
 
@@ -661,12 +678,14 @@ func (x *xdsServer) Start(ctx context.Context) error {
 		grpcServer.Stop()
 	}()
 
+	close(x.ready)
+
 	return grpcServer.Serve(l)
 }
 
 // setupMetrics creates metrics service for Contour.
 func (s *Server) setupMetrics(metricsConfig contour_api_v1alpha1.MetricsConfig, healthConfig contour_api_v1alpha1.HealthConfig,
-	registry *prometheus.Registry) error {
+	registry *prometheus.Registry) *httpsvc.Service {
 
 	// Create metrics service and register with workgroup.
 	metricsvc := &httpsvc.Service{
@@ -690,11 +709,11 @@ func (s *Server) setupMetrics(metricsConfig contour_api_v1alpha1.MetricsConfig, 
 		metricsvc.ServeMux.Handle("/healthz", h)
 	}
 
-	return s.mgr.Add(metricsvc)
+	return metricsvc
 }
 
 func (s *Server) setupHealth(healthConfig contour_api_v1alpha1.HealthConfig,
-	metricsConfig contour_api_v1alpha1.MetricsConfig) error {
+	metricsConfig contour_api_v1alpha1.MetricsConfig) *httpsvc.Service {
 
 	if healthConfig.Address != metricsConfig.Address || healthConfig.Port != metricsConfig.Port {
 		healthsvc := &httpsvc.Service{
@@ -707,7 +726,7 @@ func (s *Server) setupHealth(healthConfig contour_api_v1alpha1.HealthConfig,
 		healthsvc.ServeMux.Handle("/health", h)
 		healthsvc.ServeMux.Handle("/healthz", h)
 
-		return s.mgr.Add(healthsvc)
+		return healthsvc
 	}
 
 	return nil

@@ -90,7 +90,7 @@ func (s *contourServer) stream(st grpcStream) error {
 	// internally all registration values start at zero so sending
 	// a last that is less than zero will guarantee that each stream
 	// will generate a response immediately, then wait.
-	last := -1
+	last := 0
 	ctx := st.Context()
 
 	// now stick in this loop until the client disconnects.

@@ -27,6 +27,7 @@ import (
 	"github.com/projectcontour/contour/internal/k8s"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 type EventHandlerConfig struct {
@@ -35,6 +36,8 @@ type EventHandlerConfig struct {
 	Observer                      dag.Observer
 	HoldoffDelay, HoldoffMaxDelay time.Duration
 	StatusUpdater                 k8s.StatusUpdater
+
+	Manager manager.Manager
 }
 
 // EventHandler implements cache.ResourceEventHandler, filters k8s events towards
@@ -57,6 +60,10 @@ type EventHandler struct {
 	// seq is the sequence counter of the number of times
 	// an event has been received.
 	seq int
+
+	ready chan struct{}
+
+	mgr manager.Manager
 }
 
 func NewEventHandler(config EventHandlerConfig) *EventHandler {
@@ -69,6 +76,10 @@ func NewEventHandler(config EventHandlerConfig) *EventHandler {
 		statusUpdater:   config.StatusUpdater,
 		update:          make(chan interface{}),
 		sequence:        make(chan int, 1),
+
+		ready: make(chan struct{}),
+
+		mgr: config.Manager,
 	}
 }
 
@@ -98,6 +109,10 @@ func (e *EventHandler) OnDelete(obj interface{}) {
 
 func (e *EventHandler) NeedLeaderElection() bool {
 	return false
+}
+
+func (e *EventHandler) IsReady() <-chan struct{} {
+	return e.ready
 }
 
 // Implements leadership.NeedLeaderElectionNotification
@@ -133,6 +148,15 @@ func (e *EventHandler) Start(ctx context.Context) error {
 		v, outstanding = outstanding, 0
 		return
 	}
+
+	// e.Printf("waiting for informer caches to sync")
+	// if !e.mgr.GetCache().WaitForCacheSync(ctx) {
+	// 	return errors.New("informer cache failed to sync")
+	// }
+	// e.Printf("informer caches synced")
+
+	e.rebuildDAG()
+	close(e.ready)
 
 	for {
 		// In the main loop one of four things can happen.

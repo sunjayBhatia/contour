@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -41,7 +42,7 @@ func StartAppPoller(address string, hostName string, expectedStatus int) (*AppPo
 	}
 
 	client := &http.Client{
-		Timeout: 100 * time.Millisecond,
+		Timeout: 200 * time.Millisecond,
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
 	if err != nil {
@@ -65,11 +66,14 @@ func StartAppPoller(address string, hostName string, expectedStatus int) (*AppPo
 
 			poller.totalRequests++
 			res, err := client.Do(req)
-			if err != nil {
+			if err != nil && err != context.Canceled {
+				fmt.Println("error in client.Do", err)
 				return false, nil
 			}
 			if res.StatusCode == expectedStatus {
 				poller.successfulRequests++
+			} else {
+				fmt.Printf("expected status %d got %d\n", expectedStatus, res.StatusCode)
 			}
 			return false, nil
 		})
