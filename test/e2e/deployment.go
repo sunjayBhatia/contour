@@ -713,6 +713,7 @@ func (d *Deployment) StartLocalContour(config *config.Parameters, contourConfigu
 			"--kubeconfig=" + d.kubeConfig,
 			"--config-path=" + configFile.Name(),
 			"--disable-leader-election",
+			// "--debug",
 		}, additionalArgs...)
 
 		configReferenceName = configFile.Name()

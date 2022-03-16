@@ -14,6 +14,7 @@
 package v3
 
 import (
+	"context"
 	"fmt"
 
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
@@ -27,6 +28,9 @@ import (
 // OnStreamRequest is implemented.
 func NewRequestLoggingCallbacks(log logrus.FieldLogger) envoy_server_v3.Callbacks {
 	return &envoy_server_v3.CallbackFuncs{
+		StreamResponseFunc: func(ctx context.Context, streamID int64, req *envoy_service_discovery_v3.DiscoveryRequest, resp *envoy_service_discovery_v3.DiscoveryResponse) {
+			log.WithFields(logrus.Fields{"version_info": resp.VersionInfo, "nonce": resp.Nonce, "type_url": resp.TypeUrl}).Info("stream_response")
+		},
 		StreamRequestFunc: func(streamID int64, req *envoy_service_discovery_v3.DiscoveryRequest) error {
 			logDiscoveryRequestDetails(log, req)
 			return nil
@@ -38,7 +42,7 @@ func NewRequestLoggingCallbacks(log logrus.FieldLogger) envoy_server_v3.Callback
 // xDS server to log request details. Returns logger with fields added for any
 // subsequent error handling and logging.
 func logDiscoveryRequestDetails(l logrus.FieldLogger, req *envoy_service_discovery_v3.DiscoveryRequest) *logrus.Entry {
-	log := l.WithField("version_info", req.VersionInfo).WithField("response_nonce", req.ResponseNonce)
+	log := l.WithField("version_info", req.VersionInfo).WithField("response_nonce", req.ResponseNonce).WithField("type_url", req.TypeUrl)
 	if req.Node != nil {
 		log = log.WithField("node_id", req.Node.Id)
 
@@ -50,7 +54,7 @@ func logDiscoveryRequestDetails(l logrus.FieldLogger, req *envoy_service_discove
 	if status := req.ErrorDetail; status != nil {
 		// if Envoy rejected the last update log the details here.
 		// TODO(dfc) issue 1176: handle xDS ACK/NACK
-		log.WithField("code", status.Code).Error(status.Message)
+		log.WithField("code", status.Code).WithField("details", status.Details).Error(status.Message)
 	}
 
 	log = log.WithField("resource_names", req.ResourceNames).WithField("type_url", req.GetTypeUrl())

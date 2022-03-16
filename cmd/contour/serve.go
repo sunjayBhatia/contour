@@ -365,7 +365,7 @@ func (s *Server) doServe() error {
 	snapshotHandler := xdscache.NewSnapshotHandler(resources, s.log.WithField("context", "snapshotHandler"))
 
 	// register observer for endpoints updates.
-	endpointHandler.Observer = contour.ComposeObservers(snapshotHandler)
+	endpointHandler.Observer = snapshotHandler
 
 	// Log that we're using the fallback certificate if configured.
 	if contourConfiguration.HTTPProxy.FallbackCertificate != nil {

@@ -48,7 +48,8 @@ type SnapshotHandler struct {
 // NewSnapshotHandler returns an instance of SnapshotHandler.
 func NewSnapshotHandler(resources []ResourceCache, logger logrus.FieldLogger) *SnapshotHandler {
 	return &SnapshotHandler{
-		resources:   parseResources(resources),
+		resources: parseResources(resources),
+
 		FieldLogger: logger,
 	}
 }
@@ -76,6 +77,8 @@ func (s *SnapshotHandler) OnChange(root *dag.DAG) {
 func (s *SnapshotHandler) generateNewSnapshot() {
 	// Generate new snapshot version.
 	version := s.newSnapshotVersion()
+
+	s.WithField("snapshot_version", version).Info("generating_snapshot")
 
 	// Convert caches to envoy xDS Resources.
 	resources := map[envoy_resource_v3.Type][]envoy_types.Resource{

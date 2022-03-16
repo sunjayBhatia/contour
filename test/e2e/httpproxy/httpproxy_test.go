@@ -49,7 +49,7 @@ var _ = AfterSuite(func() {
 	// Delete resources individually instead of deleting the entire contour
 	// namespace as a performance optimization, because deleting non-empty
 	// namespaces can take up to a couple minutes to complete.
-	require.NoError(f.T(), f.Deployment.DeleteResourcesForLocalContour())
+	// require.NoError(f.T(), f.Deployment.DeleteResourcesForLocalContour())
 	gexec.CleanupBuildArtifacts()
 })
 
@@ -456,4 +456,6 @@ descriptors:
 			f.NamespacedTest("root-ns-cli", testRootNamespaces(rootNamespaces))
 		})
 	})
+
+	f.NamespacedTest("nack", testNack)
 })

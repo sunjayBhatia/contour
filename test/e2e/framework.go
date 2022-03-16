@@ -244,7 +244,7 @@ func (f *Framework) NamespacedTest(namespace string, body NamespacedTestBody) {
 			f.CreateNamespace(namespace)
 		})
 		ginkgo.AfterEach(func() {
-			f.DeleteNamespace(namespace, false)
+			// f.DeleteNamespace(namespace, false)
 		})
 
 		body(namespace)
