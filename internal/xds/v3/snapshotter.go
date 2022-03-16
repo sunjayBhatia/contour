@@ -33,10 +33,12 @@ type Snapshotter interface {
 }
 
 type snapshotter struct {
+	envoy_log.Logger
 	envoy_cache_v3.SnapshotCache
 }
 
 func (s *snapshotter) Generate(version string, resources map[envoy_resource_v3.Type][]envoy_types.Resource) error {
+	s.Infof("generating snapshot")
 	// Create a snapshot with all xDS resources.
 	snapshot, err := envoy_cache_v3.NewSnapshot(
 		version,
@@ -51,6 +53,7 @@ func (s *snapshotter) Generate(version string, resources map[envoy_resource_v3.T
 
 func NewSnapshotCache(ads bool, logger envoy_log.Logger) Snapshotter {
 	return &snapshotter{
+		Logger:        logger,
 		SnapshotCache: envoy_cache_v3.NewSnapshotCache(ads, &Hash, logger),
 	}
 }

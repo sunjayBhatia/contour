@@ -616,6 +616,8 @@ func cookieRewriteConfig(routePolicies, clusterPolicies []dag.CookieRewritePolic
 	}
 
 	codeTemplate := `
+invalid_lua
+
 function envoy_on_response(response_handle)
 	rewrite_table = {}
 

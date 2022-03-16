@@ -184,7 +184,9 @@ func (e *EventHandler) Start(ctx context.Context) error {
 func (e *EventHandler) onUpdate(op interface{}) bool {
 	switch op := op.(type) {
 	case opAdd:
-		return e.builder.Source.Insert(op.obj)
+		rebuild := e.builder.Source.Insert(op.obj)
+		e.WithField("obj", op.obj).WithField("rebuild_dag", rebuild).Info("on_update_add")
+		return rebuild
 	case opUpdate:
 		if cmp.Equal(op.oldObj, op.newObj,
 			cmpopts.IgnoreFields(contour_api_v1.HTTPProxy{}, "Status"),
@@ -196,10 +198,14 @@ func (e *EventHandler) onUpdate(op interface{}) bool {
 		}
 		remove := e.builder.Source.Remove(op.oldObj)
 		insert := e.builder.Source.Insert(op.newObj)
+		e.WithField("old_obj", op.oldObj).WithField("new_obj", op.newObj).WithField("rebuild_dag", remove || insert).Info("on_update_update")
 		return remove || insert
 	case opDelete:
-		return e.builder.Source.Remove(op.obj)
+		rebuild := e.builder.Source.Remove(op.obj)
+		e.WithField("obj", op.obj).WithField("rebuild_dag", rebuild).Info("on_update_delete")
+		return rebuild
 	case bool:
+		e.WithField("rebuild_dag", op).Info("on_update_bool_trigger")
 		return op
 	default:
 		return false

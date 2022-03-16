@@ -104,4 +104,8 @@ var _ = Describe("Incluster", func() {
 	f.NamespacedTest("projectcontour-resource-rbac", testProjectcontourResourcesRBAC)
 
 	f.NamespacedTest("ingress-resource-rbac", testIngressResourceRBAC)
+
+	f.NamespacedTest("nack-restart", testNACKRestart)
+
+	// TODO: what happens on start from scratch?
 })

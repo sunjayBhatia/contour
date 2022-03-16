@@ -456,4 +456,20 @@ descriptors:
 			f.NamespacedTest("root-ns-cli", testRootNamespaces(rootNamespaces))
 		})
 	})
+
+	Context("NACK tests", func() {
+		f.NamespacedTest("nack-http-route", testNACKHTTPRoute)
+
+		f.NamespacedTest("nack-https-route", testNACKHTTPSRoute)
+
+		Context("listener NACK", func() {
+			BeforeEach(func() {
+				contourConfig.Listener = config.ListenerParameters{
+					LuaScript: "invalid",
+				}
+			})
+
+			f.NamespacedTest("nack-listener", testNACKListener)
+		})
+	})
 })
