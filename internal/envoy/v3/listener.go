@@ -761,3 +761,17 @@ func ContainsFallbackFilterChain(filterchains []*envoy_listener_v3.FilterChain) 
 	}
 	return false
 }
+
+func LuaFilter(script string) *http.HttpFilter {
+	if script == "" {
+		return nil
+	}
+	return &http.HttpFilter{
+		Name: "envoy.filters.http.lua",
+		ConfigType: &http.HttpFilter_TypedConfig{
+			TypedConfig: protobuf.MustMarshalAny(&lua.Lua{
+				InlineCode: script,
+			}),
+		},
+	}
+}

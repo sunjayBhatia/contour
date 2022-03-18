@@ -456,6 +456,8 @@ spec:
                           merge_slashes path transformation option which strips duplicate
                           slashes from request URL paths.
                         type: boolean
+                      luaScript:
+                        type: string
                       tls:
                         description: TLS holds various configurable Envoy TLS listener
                           values.
@@ -1408,6 +1410,8 @@ spec:
                               merge_slashes path transformation option which strips
                               duplicate slashes from request URL paths.
                             type: boolean
+                          luaScript:
+                            type: string
                           tls:
                             description: TLS holds various configurable Envoy TLS
                               listener values.
@@ -2890,6 +2894,8 @@ spec:
                             policy is used.
                           type: string
                       type: object
+                    luaScript:
+                      type: string
                     pathRewritePolicy:
                       description: The policy for rewriting the path of the request
                         URL after the request has been routed to a Service.

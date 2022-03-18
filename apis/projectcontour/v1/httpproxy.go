@@ -377,6 +377,9 @@ type Route struct {
 	// RequestRedirectPolicy defines an HTTP redirection.
 	// +optional
 	RequestRedirectPolicy *HTTPRequestRedirectPolicy `json:"requestRedirectPolicy,omitempty"`
+
+	// +optional
+	LuaScript string `json:"luaScript,omitempty"`
 }
 
 // HTTPRequestRedirectPolicy defines configuration for redirecting a request.

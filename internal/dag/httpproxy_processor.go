@@ -548,6 +548,8 @@ func (p *HTTPProxyProcessor) computeRoutes(
 			RateLimitPolicy:       rlp,
 			RequestHashPolicies:   requestHashPolicies,
 			Redirect:              redirectPolicy,
+
+			LuaScript: route.LuaScript,
 		}
 
 		// If the enclosing root proxy enabled authorization,

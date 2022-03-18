@@ -451,6 +451,8 @@ func (ctx *serveContext) convertToContourConfigurationSpec() contour_api_v1alpha
 					MinimumProtocolVersion: ctx.Config.TLS.MinimumProtocolVersion,
 					CipherSuites:           cipherSuites,
 				},
+
+				LuaScript: ctx.Config.Listener.LuaScript,
 			},
 			Service: contour_api_v1alpha1.NamespacedName{
 				Name:      ctx.Config.EnvoyServiceName,

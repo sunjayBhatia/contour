@@ -548,6 +548,8 @@ type ListenerParameters struct {
 	// See https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto#envoy-api-msg-listener-connectionbalanceconfig
 	// for more information.
 	ConnectionBalancer string `yaml:"connection-balancer"`
+
+	LuaScript string `yaml:"lua-script"`
 }
 
 func (p *ListenerParameters) Validate() error {

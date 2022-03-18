@@ -431,6 +431,20 @@ func weightedClusters(route *dag.Route) *envoy_route_v3.WeightedCluster {
 			}
 			c.TypedPerFilterConfig["envoy.filters.http.lua"] = cookieRewriteConfig(route.CookieRewritePolicies, cluster.CookieRewritePolicies)
 		}
+		if len(route.LuaScript) > 0 {
+			if c.TypedPerFilterConfig == nil {
+				c.TypedPerFilterConfig = map[string]*any.Any{}
+			}
+			c.TypedPerFilterConfig["envoy.filters.http.lua"] = protobuf.MustMarshalAny(&lua.LuaPerRoute{
+				Override: &lua.LuaPerRoute_SourceCode{
+					SourceCode: &envoy_core_v3.DataSource{
+						Specifier: &envoy_core_v3.DataSource_InlineString{
+							InlineString: route.LuaScript,
+						},
+					},
+				},
+			})
+		}
 		wc.Clusters = append(wc.Clusters, c)
 	}
 	// Check if no weights were defined, if not default to even distribution

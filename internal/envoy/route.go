@@ -61,6 +61,10 @@ func SingleSimpleCluster(route *dag.Route) bool {
 		return false
 	}
 
+	if len(route.LuaScript) > 0 {
+		return false
+	}
+
 	cluster := route.Clusters[0]
 	// If the target cluster performs any kind of header manipulation,
 	// then we should use a WeightedCluster to encode the additional

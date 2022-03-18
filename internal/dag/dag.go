@@ -254,6 +254,8 @@ type Route struct {
 	// Redirect allows for a 301 Redirect to be the response
 	// to a route request vs. routing to an envoy cluster.
 	Redirect *Redirect
+
+	LuaScript string
 }
 
 // HasPathPrefix returns whether this route has a PrefixPathCondition.

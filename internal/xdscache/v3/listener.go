@@ -137,6 +137,8 @@ type ListenerConfig struct {
 	// RateLimitConfig optionally configures the global Rate Limit Service to be
 	// used.
 	RateLimitConfig *RateLimitConfig
+
+	LuaScript string
 }
 
 type RateLimitConfig struct {
@@ -384,6 +386,7 @@ func (c *ListenerCache) OnChange(root *dag.DAG) {
 					MergeSlashes(cfg.MergeSlashes).
 					AddFilter(envoy_v3.OriginalIPDetectionFilter(cfg.XffNumTrustedHops)).
 					AddFilter(envoy_v3.GlobalRateLimitFilter(envoyGlobalRateLimitConfig(cfg.RateLimitConfig))).
+					AddFilter(envoy_v3.LuaFilter(cfg.LuaScript)).
 					Get()
 
 				listeners[httpListener.Name] = envoy_v3.Listener(
@@ -436,6 +439,7 @@ func (c *ListenerCache) OnChange(root *dag.DAG) {
 					MergeSlashes(cfg.MergeSlashes).
 					AddFilter(envoy_v3.OriginalIPDetectionFilter(cfg.XffNumTrustedHops)).
 					AddFilter(envoy_v3.GlobalRateLimitFilter(envoyGlobalRateLimitConfig(cfg.RateLimitConfig))).
+					AddFilter(envoy_v3.LuaFilter(cfg.LuaScript)).
 					Get()
 
 				filters = envoy_v3.Filters(cm)
@@ -501,6 +505,7 @@ func (c *ListenerCache) OnChange(root *dag.DAG) {
 					MergeSlashes(cfg.MergeSlashes).
 					AddFilter(envoy_v3.OriginalIPDetectionFilter(cfg.XffNumTrustedHops)).
 					AddFilter(envoy_v3.GlobalRateLimitFilter(envoyGlobalRateLimitConfig(cfg.RateLimitConfig))).
+					AddFilter(envoy_v3.LuaFilter(cfg.LuaScript)).
 					Get()
 
 				// Default filter chain
