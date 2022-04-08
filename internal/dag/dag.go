@@ -23,24 +23,98 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	contour_api_v1 "github.com/projectcontour/contour/apis/projectcontour/v1"
 	"github.com/projectcontour/contour/internal/status"
 	"github.com/projectcontour/contour/internal/timeout"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
+type CacheOp interface {
+	// Apply operation to cache and return boolean if it made a meaningful change.
+	Apply(*KubernetesCache) bool
+
+	// TODO: can we use this and send a generic cache operation instead of
+	// type asserting and sending update to event handler
+	// Returns a CacheOp that is the opposite of what Apply does.
+	// ReverseOp() CacheOp
+}
+
+type OpNoop struct{}
+
+var _ CacheOp = &OpNoop{}
+
+func (*OpNoop) Apply(*KubernetesCache) bool { return true }
+
+// func (*OpNoop) ReverseOp() CacheOp { return &OpNoop{} }
+
+type OpAdd struct {
+	Obj interface{}
+}
+
+var _ CacheOp = &OpAdd{}
+
+func (op *OpAdd) Apply(c *KubernetesCache) bool {
+	return c.Insert(op.Obj)
+}
+
+// func (op *OpAdd) ReverseOp() CacheOp {
+// 	return &OpDelete{Obj: op.Obj}
+// }
+
+type OpUpdate struct {
+	OldObj, NewObj interface{}
+}
+
+var _ CacheOp = &OpUpdate{}
+
+func (op *OpUpdate) Apply(c *KubernetesCache) bool {
+	if cmp.Equal(op.OldObj, op.NewObj,
+		cmpopts.IgnoreFields(contour_api_v1.HTTPProxy{}, "Status"),
+		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
+		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields"),
+	) {
+		// e.WithField("op", "update").Debugf("%T skipping update, only status has changed", op.newObj)
+		return false
+	}
+	remove := c.Remove(op.OldObj)
+	insert := c.Insert(op.NewObj)
+	return remove || insert
+}
+
+// func (op *OpUpdate) ReverseOp() CacheOp {
+// 	return &OpUpdate{OldObj: op.NewObj, NewObj: op.OldObj}
+// }
+
+type OpDelete struct {
+	Obj interface{}
+}
+
+var _ CacheOp = &OpDelete{}
+
+func (op *OpDelete) Apply(c *KubernetesCache) bool {
+	return c.Remove(op.Obj)
+}
+
+// func (op *OpDelete) ReverseOp() CacheOp {
+// 	return &OpAdd{Obj: op.Obj}
+// }
+
 // Observer is an interface for receiving notification of DAG updates.
 type Observer interface {
-	OnChange(*DAG)
+	OnChange(*DAG, CacheOp)
 }
 
 // ObserverFunc is a function that implements the Observer interface
 // by calling itself. It can be nil.
-type ObserverFunc func(*DAG)
+type ObserverFunc func(*DAG, CacheOp)
 
-func (f ObserverFunc) OnChange(d *DAG) {
+func (f ObserverFunc) OnChange(d *DAG, op CacheOp) {
 	if f != nil {
-		f(d)
+		f(d, op)
 	}
 }
 
@@ -48,9 +122,9 @@ var _ Observer = ObserverFunc(nil)
 
 // ComposeObservers returns a new Observer that calls each of its arguments in turn.
 func ComposeObservers(observers ...Observer) Observer {
-	return ObserverFunc(func(d *DAG) {
+	return ObserverFunc(func(d *DAG, op CacheOp) {
 		for _, o := range observers {
-			o.OnChange(d)
+			o.OnChange(d, op)
 		}
 	})
 }

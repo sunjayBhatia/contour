@@ -31,8 +31,13 @@ import (
 // HTTPProxy structs, as those use upstream types which we can't alias easily.
 type ConditionType string
 
-// ValidCondition is the ConditionType for Valid.
-const ValidCondition ConditionType = "Valid"
+const (
+	// ValidCondition is the ConditionType for Valid.
+	ValidCondition ConditionType = "Valid"
+
+	// ReadyCondition is the ConditionType for Ready
+	ReadyCondition ConditionType = "Ready"
+)
 
 // NewCache creates a new Cache for holding status updates.
 func NewCache(gateway types.NamespacedName, gatewayController gatewayapi_v1alpha2.GatewayController) Cache {

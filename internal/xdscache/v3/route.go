@@ -86,7 +86,7 @@ func (c *RouteCache) Query(names []string) []proto.Message {
 // TypeURL returns the string type of RouteCache Resource.
 func (*RouteCache) TypeURL() string { return resource.RouteType }
 
-func (c *RouteCache) OnChange(root *dag.DAG) {
+func (c *RouteCache) OnChange(root *dag.DAG, _ dag.CacheOp) {
 	// RouteConfigs keyed by RouteConfig name:
 	// 	- one for all the HTTP vhost routes -- "ingress_http"
 	//	- one per svhost -- "https/<vhost fqdn>"

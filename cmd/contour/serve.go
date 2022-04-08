@@ -365,7 +365,7 @@ func (s *Server) doServe() error {
 	snapshotHandler := xdscache.NewSnapshotHandler(resources, s.log.WithField("context", "snapshotHandler"))
 
 	// register observer for endpoints updates.
-	endpointHandler.Observer = contour.ComposeObservers(snapshotHandler)
+	endpointHandler.Observer = snapshotHandler
 
 	// Log that we're using the fallback certificate if configured.
 	if contourConfiguration.HTTPProxy.FallbackCertificate != nil {
@@ -420,6 +420,9 @@ func (s *Server) doServe() error {
 		StatusUpdater:   sh.Writer(),
 		Builder:         builder,
 	})
+
+	// TODO: move this somewhere better
+	snapshotHandler.EventHandler = contourHandler
 
 	// Wrap contourHandler in an EventRecorder which tracks API server events.
 	eventHandler := &contour.EventRecorder{
@@ -631,7 +634,7 @@ func (x *xdsServer) Start(ctx context.Context) error {
 	case contour_api_v1alpha1.EnvoyServerType:
 		v3cache := contour_xds_v3.NewSnapshotCache(false, log)
 		x.snapshotHandler.AddSnapshotter(v3cache)
-		contour_xds_v3.RegisterServer(envoy_server_v3.NewServer(ctx, v3cache, contour_xds_v3.NewRequestLoggingCallbacks(log)), grpcServer)
+		contour_xds_v3.RegisterServer(envoy_server_v3.NewServer(ctx, v3cache, contour_xds_v3.NewRequestLoggingCallbacks(log, x.snapshotHandler)), grpcServer)
 	case contour_api_v1alpha1.ContourServerType:
 		contour_xds_v3.RegisterServer(contour_xds_v3.NewContourServer(log, xdscache.ResourcesOf(x.resources)...), grpcServer)
 	default:

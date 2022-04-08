@@ -14,10 +14,12 @@
 package v3
 
 import (
+	"context"
 	"fmt"
 
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	envoy_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"github.com/projectcontour/contour/internal/xdscache"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,11 +27,15 @@ import (
 // callbacks for use when Contour is run in Envoy xDS server mode to provide
 // request detail logging. Currently only the xDS State of the World callback
 // OnStreamRequest is implemented.
-func NewRequestLoggingCallbacks(log logrus.FieldLogger) envoy_server_v3.Callbacks {
+func NewRequestLoggingCallbacks(log logrus.FieldLogger, sh *xdscache.SnapshotHandler) envoy_server_v3.Callbacks {
 	return &envoy_server_v3.CallbackFuncs{
 		StreamRequestFunc: func(streamID int64, req *envoy_service_discovery_v3.DiscoveryRequest) error {
-			logDiscoveryRequestDetails(log, req)
+			logDiscoveryRequestDetails(log, sh, req)
 			return nil
+		},
+		StreamResponseFunc: func(ctx context.Context, streamID int64, req *envoy_service_discovery_v3.DiscoveryRequest, resp *envoy_service_discovery_v3.DiscoveryResponse) {
+			// Associate nonce with snapshot version
+			sh.SaveNonceToSnapshot(resp.TypeUrl, resp.Nonce, resp.VersionInfo)
 		},
 	}
 }
@@ -37,7 +43,7 @@ func NewRequestLoggingCallbacks(log logrus.FieldLogger) envoy_server_v3.Callback
 // Helper function for use in the Envoy xDS server callbacks and the Contour
 // xDS server to log request details. Returns logger with fields added for any
 // subsequent error handling and logging.
-func logDiscoveryRequestDetails(l logrus.FieldLogger, req *envoy_service_discovery_v3.DiscoveryRequest) *logrus.Entry {
+func logDiscoveryRequestDetails(l logrus.FieldLogger, sh *xdscache.SnapshotHandler, req *envoy_service_discovery_v3.DiscoveryRequest) *logrus.Entry {
 	log := l.WithField("version_info", req.VersionInfo).WithField("response_nonce", req.ResponseNonce)
 	if req.Node != nil {
 		log = log.WithField("node_id", req.Node.Id)
@@ -49,8 +55,10 @@ func logDiscoveryRequestDetails(l logrus.FieldLogger, req *envoy_service_discove
 
 	if status := req.ErrorDetail; status != nil {
 		// if Envoy rejected the last update log the details here.
-		// TODO(dfc) issue 1176: handle xDS ACK/NACK
 		log.WithField("code", status.Code).Error(status.Message)
+		sh.RevertChange(req.TypeUrl, req.ResponseNonce)
+	} else {
+		sh.AcceptChange(req.TypeUrl, req.ResponseNonce)
 	}
 
 	log = log.WithField("resource_names", req.ResourceNames).WithField("type_url", req.GetTypeUrl())

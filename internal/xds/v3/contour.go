@@ -105,7 +105,7 @@ func (s *contourServer) stream(st grpcStream) error {
 		}
 
 		// Note: redeclare log in this scope so the next time around the loop all is forgotten.
-		log := logDiscoveryRequestDetails(log, req)
+		// log := logDiscoveryRequestDetails(log, req)
 
 		// From the request we derive the resource to stream which have
 		// been registered according to the typeURL.

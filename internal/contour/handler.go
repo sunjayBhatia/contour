@@ -18,15 +18,12 @@ package contour
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	contour_api_v1 "github.com/projectcontour/contour/apis/projectcontour/v1"
 	"github.com/projectcontour/contour/internal/dag"
 	"github.com/projectcontour/contour/internal/k8s"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type EventHandlerConfig struct {
@@ -50,7 +47,7 @@ type EventHandler struct {
 
 	logrus.FieldLogger
 
-	update chan interface{}
+	update chan dag.CacheOp
 
 	sequence chan int
 
@@ -67,33 +64,24 @@ func NewEventHandler(config EventHandlerConfig) *EventHandler {
 		holdoffDelay:    config.HoldoffDelay,
 		holdoffMaxDelay: config.HoldoffMaxDelay,
 		statusUpdater:   config.StatusUpdater,
-		update:          make(chan interface{}),
+		update:          make(chan dag.CacheOp),
 		sequence:        make(chan int, 1),
 	}
 }
 
-type opAdd struct {
-	obj interface{}
-}
-
-type opUpdate struct {
-	oldObj, newObj interface{}
-}
-
-type opDelete struct {
-	obj interface{}
-}
-
 func (e *EventHandler) OnAdd(obj interface{}) {
-	e.update <- opAdd{obj: obj}
+	e.WithField("obj", fmt.Sprintf("%T", obj)).Info("OnAdd")
+	e.update <- &dag.OpAdd{Obj: obj}
 }
 
 func (e *EventHandler) OnUpdate(oldObj, newObj interface{}) {
-	e.update <- opUpdate{oldObj: oldObj, newObj: newObj}
+	e.WithField("oldObj", fmt.Sprintf("%T", oldObj)).WithField("newObj", fmt.Sprintf("%T", newObj)).Info("OnUpdate")
+	e.update <- &dag.OpUpdate{OldObj: oldObj, NewObj: newObj}
 }
 
 func (e *EventHandler) OnDelete(obj interface{}) {
-	e.update <- opDelete{obj: obj}
+	e.WithField("obj", fmt.Sprintf("%T", obj)).Info("OnDelete")
+	e.update <- &dag.OpDelete{Obj: obj}
 }
 
 func (e *EventHandler) NeedLeaderElection() bool {
@@ -104,7 +92,7 @@ func (e *EventHandler) NeedLeaderElection() bool {
 func (e *EventHandler) OnElectedLeader() {
 	// Trigger an update when we are elected leader to ensure resource
 	// statuses are not stale.
-	e.update <- true
+	e.update <- &dag.OpNoop{}
 }
 
 func (e *EventHandler) Start(ctx context.Context) error {
@@ -119,8 +107,7 @@ func (e *EventHandler) Start(ctx context.Context) error {
 		// timer holds the timer which will expire after e.HoldoffDelay
 		timer *time.Timer
 
-		// pending is a reference to the current timer's channel.
-		pending <-chan time.Time
+		rebuildNotifyChan = make(chan dag.CacheOp)
 
 		// lastDAGRebuild holds the last time rebuildDAG was called.
 		// lastDAGRebuild is seeded to the current time on entry to
@@ -146,7 +133,7 @@ func (e *EventHandler) Start(ctx context.Context) error {
 		// Only one of these things can happen at a time.
 		select {
 		case op := <-e.update:
-			if e.onUpdate(op) {
+			if op.Apply(&e.builder.Source) {
 				outstanding++
 				// If there is already a timer running, stop it.
 				if timer != nil {
@@ -159,50 +146,23 @@ func (e *EventHandler) Start(ctx context.Context) error {
 					// immediately by delaying for 0ns.
 					delay = 0
 				}
-				timer = time.NewTimer(delay)
-				pending = timer.C
+				timer = time.AfterFunc(delay, func() {
+					rebuildNotifyChan <- op
+				})
 			} else {
 				// notify any watchers that we received the event but chose
 				// not to process it.
 				e.incSequence()
 			}
-		case <-pending:
+		case op := <-rebuildNotifyChan:
 			e.WithField("last_update", time.Since(lastDAGRebuild)).WithField("outstanding", reset()).Info("performing delayed update")
-			e.rebuildDAG()
+			e.rebuildDAG(op)
 			e.incSequence()
 			lastDAGRebuild = time.Now()
 		case <-ctx.Done():
 			// shutdown
 			return nil
 		}
-	}
-}
-
-// onUpdate processes the event received. onUpdate returns
-// true if the event changed the cache in a way that requires
-// notifying the Observer.
-func (e *EventHandler) onUpdate(op interface{}) bool {
-	switch op := op.(type) {
-	case opAdd:
-		return e.builder.Source.Insert(op.obj)
-	case opUpdate:
-		if cmp.Equal(op.oldObj, op.newObj,
-			cmpopts.IgnoreFields(contour_api_v1.HTTPProxy{}, "Status"),
-			cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
-			cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields"),
-		) {
-			e.WithField("op", "update").Debugf("%T skipping update, only status has changed", op.newObj)
-			return false
-		}
-		remove := e.builder.Source.Remove(op.oldObj)
-		insert := e.builder.Source.Insert(op.newObj)
-		return remove || insert
-	case opDelete:
-		return e.builder.Source.Remove(op.obj)
-	case bool:
-		return op
-	default:
-		return false
 	}
 }
 
@@ -228,9 +188,10 @@ func (e *EventHandler) incSequence() {
 
 // rebuildDAG builds a new DAG and sends it to the Observer,
 // the updates the status on objects, and updates the metrics.
-func (e *EventHandler) rebuildDAG() {
+// passes along the change to the cace to the observer.
+func (e *EventHandler) rebuildDAG(op dag.CacheOp) {
 	latestDAG := e.builder.Build()
-	e.observer.OnChange(latestDAG)
+	e.observer.OnChange(latestDAG, op)
 
 	for _, upd := range latestDAG.StatusCache.GetStatusUpdates() {
 		e.statusUpdater.Send(upd)

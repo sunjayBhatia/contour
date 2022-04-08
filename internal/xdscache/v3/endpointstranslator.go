@@ -269,7 +269,7 @@ func (e *EndpointsTranslator) Merge(entries map[string]*envoy_endpoint_v3.Cluste
 }
 
 // OnChange observes DAG rebuild events.
-func (e *EndpointsTranslator) OnChange(root *dag.DAG) {
+func (e *EndpointsTranslator) OnChange(root *dag.DAG, _ dag.CacheOp) {
 	clusters := []*dag.ServiceCluster{}
 	names := map[string]bool{}
 

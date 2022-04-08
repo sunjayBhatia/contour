@@ -84,12 +84,12 @@ func (m *RebuildMetricsObserver) OnElectedLeader() {
 	close(m.httpProxyMetricsEnabled)
 }
 
-func (m *RebuildMetricsObserver) OnChange(d *dag.DAG) {
+func (m *RebuildMetricsObserver) OnChange(d *dag.DAG, op dag.CacheOp) {
 	m.metrics.SetDAGLastRebuilt(time.Now())
 	m.metrics.SetDAGRebuiltTotal()
 
 	timer := prometheus.NewTimer(m.metrics.CacheHandlerOnUpdateSummary)
-	m.nextObserver.OnChange(d)
+	m.nextObserver.OnChange(d, op)
 	timer.ObserveDuration()
 
 	select {

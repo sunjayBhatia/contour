@@ -352,7 +352,7 @@ func (c *ListenerCache) Query(names []string) []proto.Message {
 
 func (*ListenerCache) TypeURL() string { return resource.ListenerType }
 
-func (c *ListenerCache) OnChange(root *dag.DAG) {
+func (c *ListenerCache) OnChange(root *dag.DAG, _ dag.CacheOp) {
 	cfg := c.Config.defaultListeners()
 	listeners := c.Config.secureListeners()
 

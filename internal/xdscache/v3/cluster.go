@@ -76,7 +76,7 @@ func (c *ClusterCache) Query(names []string) []proto.Message {
 
 func (*ClusterCache) TypeURL() string { return resource.ClusterType }
 
-func (c *ClusterCache) OnChange(root *dag.DAG) {
+func (c *ClusterCache) OnChange(root *dag.DAG, _ dag.CacheOp) {
 	clusters := map[string]*envoy_cluster_v3.Cluster{}
 
 	for _, cluster := range root.GetClusters() {

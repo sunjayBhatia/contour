@@ -37,6 +37,6 @@ func (c *RuntimeCache) Query(names []string) []proto.Message {
 
 func (*RuntimeCache) TypeURL() string { return resource.RuntimeType }
 
-func (c *RuntimeCache) OnChange(root *dag.DAG) {
+func (c *RuntimeCache) OnChange(root *dag.DAG, _ dag.CacheOp) {
 	// DAG changes do not affect runtime layers at the moment.
 }

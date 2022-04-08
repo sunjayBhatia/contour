@@ -94,7 +94,7 @@ func (c *SecretCache) Query(names []string) []proto.Message {
 
 func (*SecretCache) TypeURL() string { return resource.SecretType }
 
-func (c *SecretCache) OnChange(root *dag.DAG) {
+func (c *SecretCache) OnChange(root *dag.DAG, _ dag.CacheOp) {
 	secrets := map[string]*envoy_tls_v3.Secret{}
 
 	for _, secret := range root.GetSecrets() {
