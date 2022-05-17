@@ -103,7 +103,9 @@ jobs:
           CONTOUR_E2E_IMAGE: ghcr.io/projectcontour/contour:main
           IPV6_CLUSTER: "true"
         run: |
+          ifconfig | grep inet6
           export CONTOUR_E2E_LOCAL_HOST=$(ifconfig | grep inet6 | grep -v link | grep -v host | head -n1 | awk '{print $2}')
+          echo "CONTOUR_E2E_LOCAL_HOST=$CONTOUR_E2E_LOCAL_HOST"
           make setup-kind-cluster run-e2e cleanup-kind
       - uses: act10ns/slack@v1
         with:
