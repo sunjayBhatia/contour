@@ -23,6 +23,7 @@ var (
 	ExtensionServiceGVR     = GroupVersion.WithResource("extensionservices")
 	ContourConfigurationGVR = GroupVersion.WithResource("contourconfigurations")
 	ContourDeploymentGVR    = GroupVersion.WithResource("contourdeployments")
+	RateLimitPolicyGVR      = GroupVersion.WithResource("ratelimitpolicies")
 )
 
 var (
@@ -45,6 +46,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ContourConfigurationList{},
 		&ContourDeployment{},
 		&ContourDeploymentList{},
+		&RateLimitPolicy{},
+		&RateLimitPolicyList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, GroupVersion)

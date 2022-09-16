@@ -3782,6 +3782,8 @@ Resource Types:
 <a href="#projectcontour.io/v1alpha1.ContourDeployment">ContourDeployment</a>
 </li><li>
 <a href="#projectcontour.io/v1alpha1.ExtensionService">ExtensionService</a>
+</li><li>
+<a href="#projectcontour.io/v1alpha1.RateLimitPolicy">RateLimitPolicy</a>
 </li></ul>
 <h3 id="projectcontour.io/v1alpha1.ContourConfiguration">ContourConfiguration
 </h3>
@@ -4337,6 +4339,127 @@ ExtensionServiceStatus
 </em>
 </td>
 <td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectcontour.io/v1alpha1.RateLimitPolicy">RateLimitPolicy
+</h3>
+<p>
+<p>RateLimitPolicy provides a way to apply &hellip;</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+projectcontour.io/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>RateLimitPolicy</code></td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>metadata</code>
+<br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>spec</code>
+<br>
+<em>
+<a href="#projectcontour.io/v1alpha1.RateLimitPolicySpec">
+RateLimitPolicySpec
+</a>
+</em>
+</td>
+<td>
+<br>
+<br>
+<table style="border:none">
+<tr>
+<td style="white-space:nowrap">
+<code>targetRef</code>
+<br>
+<em>
+sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyTargetReference
+</em>
+</td>
+<td>
+<p>TargetRef identifies an API object to apply policy to.</p>
+</td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>override</code>
+<br>
+<em>
+<a href="#projectcontour.io/v1alpha1.RateLimitPolicyConfig">
+RateLimitPolicyConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Override defines policy configuration that should override policy
+configuration attached below the targeted resource in the hierarchy.</p>
+</td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>default</code>
+<br>
+<em>
+<a href="#projectcontour.io/v1alpha1.RateLimitPolicyConfig">
+RateLimitPolicyConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Default defines default policy configuration for the targeted resource.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>status</code>
+<br>
+<em>
+<a href="#projectcontour.io/v1alpha1.RateLimitPolicyStatus">
+RateLimitPolicyStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -6530,6 +6653,108 @@ bool
 <em>(Optional)</em>
 <p>ApplyToIngress determines if the Policies will apply to ingress objects</p>
 <p>Contour&rsquo;s default is false.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectcontour.io/v1alpha1.RateLimitPolicyConfig">RateLimitPolicyConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#projectcontour.io/v1alpha1.RateLimitPolicySpec">RateLimitPolicySpec</a>)
+</p>
+<p>
+</p>
+<h3 id="projectcontour.io/v1alpha1.RateLimitPolicySpec">RateLimitPolicySpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#projectcontour.io/v1alpha1.RateLimitPolicy">RateLimitPolicy</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="white-space:nowrap">
+<code>targetRef</code>
+<br>
+<em>
+sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyTargetReference
+</em>
+</td>
+<td>
+<p>TargetRef identifies an API object to apply policy to.</p>
+</td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>override</code>
+<br>
+<em>
+<a href="#projectcontour.io/v1alpha1.RateLimitPolicyConfig">
+RateLimitPolicyConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Override defines policy configuration that should override policy
+configuration attached below the targeted resource in the hierarchy.</p>
+</td>
+</tr>
+<tr>
+<td style="white-space:nowrap">
+<code>default</code>
+<br>
+<em>
+<a href="#projectcontour.io/v1alpha1.RateLimitPolicyConfig">
+RateLimitPolicyConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Default defines default policy configuration for the targeted resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectcontour.io/v1alpha1.RateLimitPolicyStatus">RateLimitPolicyStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#projectcontour.io/v1alpha1.RateLimitPolicy">RateLimitPolicy</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="white-space:nowrap">
+<code>conditions</code>
+<br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#condition-v1-meta">
+[]Kubernetes meta/v1.Condition
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Conditions describe the current conditions of the RateLimitPolicy.</p>
 </td>
 </tr>
 </tbody>
