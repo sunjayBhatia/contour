@@ -12,10 +12,30 @@ env:
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   GO_VERSION: 1.19.0
 jobs:
-  e2e-envoy-xds:
+  upgrade:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # use stable kubernetes_version values since they're included
+        # in the name of the GitHub Actions job, and we don't want to
+        # have to update branch protection rules every time we change
+        # a Kubernetes version number.
+        kubernetes_version: ["kubernetes:latest", "kubernetes:n-1", "kubernetes:n-2"]
+        # include defines an additional variable (the specific node
+        # image to use) for each kubernetes_version value.
+        include:
+          - kubernetes_version: "kubernetes:latest"
+            node_image: "docker.io/kindest/node:v1.25.2@sha256:9be91e9e9cdf116809841fc77ebdb8845443c4c72fe5218f3ae9eb57fdb4bace"
+          - kubernetes_version: "kubernetes:n-1"
+            node_image: "docker.io/kindest/node:v1.24.6@sha256:97e8d00bc37a7598a0b32d1fabd155a96355c49fa0d4d4790aab0f161bf31be1"
+          - kubernetes_version: "kubernetes:n-2"
+            node_image: "docker.io/kindest/node:v1.23.12@sha256:9402cf1330bbd3a0d097d2033fa489b2abe40d479cc5ef47d0b6a6960613148a"
     steps:
       - uses: actions/checkout@v2
+        with:
+          # Fetch history for all tags and branches so we can figure out most
+          # recent release tag.
+          fetch-depth: 0
       - uses: actions/cache@v2
         with:
           # * Module download cache
@@ -33,149 +53,13 @@ jobs:
         run: |
           ./hack/actions/install-kubernetes-toolchain.sh $GITHUB_WORKSPACE/bin
           echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
-      - name: e2e tests
+      - name: upgrade tests
         env:
-          CONTOUR_E2E_IMAGE: ghcr.io/projectcontour/contour:main
-          CONTOUR_E2E_XDS_SERVER_TYPE: envoy
+          NODEIMAGE: ${{ matrix.node_image }}
+          MULTINODE_CLUSTER: "true"
+          CONTOUR_UPGRADE_FROM_VERSION: v1.22.1
         run: |
-          make setup-kind-cluster run-e2e cleanup-kind
-      - uses: act10ns/slack@v1
-        with:
-          status: ${{ job.status }}
-          steps: ${{ toJson(steps) }}
-          channel: '#contour-ci-notifications'
-        if: ${{ failure() && github.ref == 'refs/heads/main' }}
-  e2e-envoy-deployment:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        with:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-${{ github.job }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ github.job }}-go-
-      - uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: add deps to path
-        run: |
-          ./hack/actions/install-kubernetes-toolchain.sh $GITHUB_WORKSPACE/bin
-          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
-      - name: e2e tests
-        env:
-          CONTOUR_E2E_IMAGE: ghcr.io/projectcontour/contour:main
-          CONTOUR_E2E_ENVOY_DEPLOYMENT_MODE: deployment
-        run: |
-          make setup-kind-cluster run-e2e cleanup-kind
-      - uses: act10ns/slack@v1
-        with:
-          status: ${{ job.status }}
-          steps: ${{ toJson(steps) }}
-          channel: '#contour-ci-notifications'
-        if: ${{ failure() && github.ref == 'refs/heads/main' }}
-  e2e-gateway-reconcile-controller:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        with:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-${{ github.job }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ github.job }}-go-
-      - uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: add deps to path
-        run: |
-          ./hack/actions/install-kubernetes-toolchain.sh $GITHUB_WORKSPACE/bin
-          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
-      - name: e2e tests
-        env:
-          CONTOUR_E2E_IMAGE: ghcr.io/projectcontour/contour:main
-          CONTOUR_E2E_PACKAGE_FOCUS: ./test/e2e/gateway
-          CONTOUR_E2E_GATEWAY_RECONCILE_MODE: controller
-        run: |
-          make setup-kind-cluster run-e2e cleanup-kind
-      - uses: act10ns/slack@v1
-        with:
-          status: ${{ job.status }}
-          steps: ${{ toJson(steps) }}
-          channel: '#contour-ci-notifications'
-        if: ${{ failure() && github.ref == 'refs/heads/main' }}
-  e2e-ipv6:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        with:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-${{ github.job }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ github.job }}-go-
-      - uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: add deps to path
-        run: |
-          ./hack/actions/install-kubernetes-toolchain.sh $GITHUB_WORKSPACE/bin
-          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
-      - name: e2e tests
-        env:
-          CONTOUR_E2E_IMAGE: ghcr.io/projectcontour/contour:main
-          IPV6_CLUSTER: "true"
-        run: |
-          # Set up cluster to ensure we have a docker bridge network to find a non-local ip from.
-          make setup-kind-cluster
-          export CONTOUR_E2E_LOCAL_HOST=$(ifconfig | grep inet6 | grep global | head -n1 | awk '{print $2}')
-          make run-e2e cleanup-kind
-      - uses: act10ns/slack@v1
-        with:
-          status: ${{ job.status }}
-          steps: ${{ toJson(steps) }}
-          channel: '#contour-ci-notifications'
-        if: ${{ failure() && github.ref == 'refs/heads/main' }}
-  gateway-conformance:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        with:
-          # * Module download cache
-          # * Build cache (Linux)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-${{ github.job }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ github.job }}-go-
-      - uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: add deps to path
-        run: |
-          ./hack/actions/install-kubernetes-toolchain.sh $GITHUB_WORKSPACE/bin
-          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
-      - name: Gateway API conformance tests (latest)
-        env:
-          CONTOUR_E2E_IMAGE: ghcr.io/projectcontour/contour:main
-          GATEWAY_API_VERSION: "main"
-        run: |
-          # Skip the `load-contour-image-kind` target, pull the `main` image instead.
-          make setup-kind-cluster run-gateway-conformance cleanup-kind
+          make upgrade
       - uses: act10ns/slack@v1
         with:
           status: ${{ job.status }}
