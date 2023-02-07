@@ -20,16 +20,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	contour_api_v1 "github.com/projectcontour/contour/apis/projectcontour/v1"
-	contour_api_v1alpha1 "github.com/projectcontour/contour/apis/projectcontour/v1alpha1"
 	"github.com/projectcontour/contour/internal/dag"
 	"github.com/projectcontour/contour/internal/k8s"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayapi_v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayapi_v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 type EventHandlerConfig struct {
@@ -189,16 +182,13 @@ func (e *EventHandler) onUpdate(op interface{}) bool {
 	case opAdd:
 		return e.builder.Source.Insert(op.obj)
 	case opUpdate:
-		if cmp.Equal(op.oldObj, op.newObj,
-			cmpopts.IgnoreFields(contour_api_v1.HTTPProxy{}, "Status"),
-			cmpopts.IgnoreFields(contour_api_v1alpha1.ExtensionService{}, "Status"),
-			cmpopts.IgnoreFields(gatewayapi_v1beta1.GatewayClass{}, "Status"),
-			cmpopts.IgnoreFields(gatewayapi_v1beta1.Gateway{}, "Status"),
-			cmpopts.IgnoreFields(gatewayapi_v1beta1.HTTPRoute{}, "Status"),
-			cmpopts.IgnoreFields(gatewayapi_v1alpha2.TLSRoute{}, "Status"),
-			cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
-			cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields"),
-		) {
+		equal, err := k8s.IsObjectEqual(op.oldObj, op.newObj)
+		// Error is returned if there was no support for comparing equality of the specific object type.
+		// We can still process the object but it will be always considered as changed.
+		if err != nil {
+			e.WithError(err).WithField("op", "update").Errorf("%T error comparing objects", op.newObj)
+		}
+		if equal {
 			e.WithField("op", "update").Debugf("%T skipping update, only status has changed", op.newObj)
 			return false
 		}
