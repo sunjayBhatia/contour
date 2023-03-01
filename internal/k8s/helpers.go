@@ -90,11 +90,15 @@ func isStatusEqual(objA, objB interface{}) bool {
 	return false
 }
 
+type ComparableObject interface {
+	client.Object
+}
+
 // IsObjectEqual checks if objects received during update are equal.
 //
 // Make an attempt to avoid comparing full objects since it can be very CPU intensive.
 // Prefer comparing Generation when only interested in spec changes.
-func IsObjectEqual(old, new interface{}) (bool, error) {
+func IsObjectEqual[T ComparableObject](old, new T) (bool, error) {
 
 	// Fast path for any object: when ResourceVersions are equal, the objects are equal.
 	// NOTE: This optimizes the case when controller-runtime executes full sync and sends updates for all objects.
@@ -102,53 +106,40 @@ func IsObjectEqual(old, new interface{}) (bool, error) {
 		return true, nil
 	}
 
-	switch old := old.(type) {
+	switch oldObj := any(old).(type) {
 
 	// Fast path for objects that implement Generation and where only spec changes matter.
 	// Status/annotations/labels changes are ignored.
 	// Generation is implemented in CRDs, Ingress and IngressClass.
-	case *contour_api_v1alpha1.ExtensionService:
-		return isGenerationEqual(old, new), nil
-	case *contour_api_v1.TLSCertificateDelegation:
-		return isGenerationEqual(old, new), nil
-	case *contour_api_v1alpha1.ContourConfiguration:
-		return isGenerationEqual(old, new), nil
+	case *contour_api_v1alpha1.ExtensionService,
+		*contour_api_v1.TLSCertificateDelegation,
+		*contour_api_v1alpha1.ContourConfiguration,
 
-	case *gatewayapi_v1beta1.GatewayClass:
-		return isGenerationEqual(old, new), nil
-	case *gatewayapi_v1beta1.Gateway:
-		return isGenerationEqual(old, new), nil
-	case *gatewayapi_v1beta1.HTTPRoute:
-		return isGenerationEqual(old, new), nil
-	case *gatewayapi_v1alpha2.TLSRoute:
-		return isGenerationEqual(old, new), nil
-	case *gatewayapi_v1beta1.ReferenceGrant:
+		*gatewayapi_v1beta1.GatewayClass,
+		*gatewayapi_v1beta1.Gateway,
+		*gatewayapi_v1beta1.HTTPRoute,
+		*gatewayapi_v1alpha2.TLSRoute,
+		*gatewayapi_v1beta1.ReferenceGrant:
 		return isGenerationEqual(old, new), nil
 
 	// Slow path: compare the content of the objects.
-	case *contour_api_v1.HTTPProxy:
-		if new, ok := new.(*contour_api_v1.HTTPProxy); ok {
-			return isGenerationEqual(old, new) &&
-				apiequality.Semantic.DeepEqual(old.ObjectMeta.Annotations, new.ObjectMeta.Annotations), nil
-		}
-	case *networking_v1.Ingress:
-		if new, ok := new.(*networking_v1.Ingress); ok {
-			return isGenerationEqual(old, new) &&
-				apiequality.Semantic.DeepEqual(old.ObjectMeta.Annotations, new.ObjectMeta.Annotations), nil
-		}
+	case *contour_api_v1.HTTPProxy,
+		*networking_v1.Ingress:
+		return isGenerationEqual(old, new) &&
+			apiequality.Semantic.DeepEqual(old.GetAnnotations(), new.GetAnnotations()), nil
 	case *v1.Secret:
-		if new, ok := new.(*v1.Secret); ok {
-			return reflect.DeepEqual(old.Data, new.Data), nil
+		if newObj, ok := any(new).(*v1.Secret); ok {
+			return reflect.DeepEqual(oldObj.Data, newObj.Data), nil
 		}
 	case *v1.Service:
-		if new, ok := new.(*v1.Service); ok {
-			return apiequality.Semantic.DeepEqual(old.Spec, new.Spec) &&
-				apiequality.Semantic.DeepEqual(old.Status, new.Status) &&
-				apiequality.Semantic.DeepEqual(old.ObjectMeta.Annotations, new.ObjectMeta.Annotations), nil
+		if newObj, ok := any(new).(*v1.Service); ok {
+			return apiequality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec) &&
+				apiequality.Semantic.DeepEqual(oldObj.Status, newObj.Status) &&
+				apiequality.Semantic.DeepEqual(old.GetAnnotations(), new.GetAnnotations()), nil
 		}
 	case *v1.Endpoints:
-		if new, ok := new.(*v1.Endpoints); ok {
-			return apiequality.Semantic.DeepEqual(old.Subsets, new.Subsets), nil
+		if newObj, ok := any(new).(*v1.Endpoints); ok {
+			return apiequality.Semantic.DeepEqual(oldObj.Subsets, newObj.Subsets), nil
 		}
 
 	default:
@@ -157,13 +148,13 @@ func IsObjectEqual(old, new interface{}) (bool, error) {
 
 	// ResourseVersions are not equal and we don't know how to compare the object type.
 	// This should never happen and indicates that new type was added to the code but is missing in the switch above.
-	return false, fmt.Errorf("do not know how to compare %s", old.(client.Object).GetObjectKind().GroupVersionKind().String())
+	return false, fmt.Errorf("do not know how to compare %s", old.GetObjectKind().GroupVersionKind().String())
 }
 
-func isGenerationEqual(a, b interface{}) bool {
-	return a.(client.Object).GetGeneration() == b.(client.Object).GetGeneration()
+func isGenerationEqual[T client.Object](a, b T) bool {
+	return a.GetGeneration() == b.GetGeneration()
 }
 
-func isResourceVersionEqual(a, b interface{}) bool {
-	return a.(client.Object).GetResourceVersion() == b.(client.Object).GetResourceVersion()
+func isResourceVersionEqual[T client.Object](a, b T) bool {
+	return a.GetResourceVersion() == b.GetResourceVersion()
 }

@@ -96,7 +96,7 @@ func TestIsObjectEqual(t *testing.T) {
 			new, _, err := deserializer.Decode([]byte(objects[1]), nil, nil)
 			assert.NoError(t, err)
 
-			got, err := IsObjectEqual(old, new)
+			got, err := IsObjectEqual(old.(ComparableObject), new.(ComparableObject))
 			assert.NoError(t, err)
 			assert.Equal(t, tc.equals, got)
 		})

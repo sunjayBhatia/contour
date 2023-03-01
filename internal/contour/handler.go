@@ -182,19 +182,25 @@ func (e *EventHandler) onUpdate(op interface{}) bool {
 	case opAdd:
 		return e.builder.Source.Insert(op.obj)
 	case opUpdate:
-		equal, err := k8s.IsObjectEqual(op.oldObj, op.newObj)
-		// Error is returned if there was no support for comparing equality of the specific object type.
-		// We can still process the object but it will be always considered as changed.
-		if err != nil {
-			e.WithError(err).WithField("op", "update").Errorf("%T error comparing objects", op.newObj)
+		old, oldOk := op.oldObj.(k8s.ComparableObject)
+		new, newOk := op.newObj.(k8s.ComparableObject)
+		if oldOk && newOk {
+			equal, err := k8s.IsObjectEqual(old, new)
+			// Error is returned if there was no support for comparing equality of the specific object type.
+			// We can still process the object but it will be always considered as changed.
+			if err != nil {
+				e.WithError(err).WithField("op", "update").Errorf("%T error comparing objects", op.newObj)
+			}
+			if equal {
+				e.WithField("op", "update").Debugf("%T skipping update, only status has changed", op.newObj)
+				return false
+			}
+			remove := e.builder.Source.Remove(op.oldObj)
+			insert := e.builder.Source.Insert(op.newObj)
+			return remove || insert
 		}
-		if equal {
-			e.WithField("op", "update").Debugf("%T skipping update, only status has changed", op.newObj)
-			return false
-		}
-		remove := e.builder.Source.Remove(op.oldObj)
-		insert := e.builder.Source.Insert(op.newObj)
-		return remove || insert
+		// Log here, but this should never happen.
+		return false
 	case opDelete:
 		return e.builder.Source.Remove(op.obj)
 	case bool:
