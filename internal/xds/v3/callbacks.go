@@ -17,8 +17,8 @@ import (
 	"context"
 	"fmt"
 
-	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/core/v3"
+	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/discovery/v3"
 	envoy_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/sirupsen/logrus"
 )

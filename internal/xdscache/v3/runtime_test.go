@@ -16,7 +16,7 @@ package v3
 import (
 	"testing"
 
-	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
+	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/runtime/v3"
 	"github.com/projectcontour/contour/internal/protobuf"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"

@@ -14,8 +14,8 @@
 package v3
 
 import (
-	envoy_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	envoy_core_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/core/v3"
+	envoy_endpoint_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/endpoint/v3"
 	"github.com/projectcontour/contour/internal/dag"
 	"github.com/projectcontour/contour/internal/xds"
 	"google.golang.org/protobuf/types/known/wrapperspb"

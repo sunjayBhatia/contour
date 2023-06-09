@@ -14,12 +14,12 @@
 package v3
 
 import (
-	envoy_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	envoy_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	envoy_router_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
-	http "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	envoy_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	envoy_core_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/core/v3"
+	envoy_listener_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/listener/v3"
+	envoy_route_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/route/v3"
+	envoy_router_v3 "github.com/envoyproxy/go-control-plane/api/envoy/extensions/filters/http/router/v3"
+	http "github.com/envoyproxy/go-control-plane/api/envoy/extensions/filters/network/http_connection_manager/v3"
+	envoy_tls_v3 "github.com/envoyproxy/go-control-plane/api/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	contour_api_v1alpha1 "github.com/projectcontour/contour/apis/projectcontour/v1alpha1"
 	"github.com/projectcontour/contour/internal/protobuf"

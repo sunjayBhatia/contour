@@ -16,8 +16,8 @@ package v3
 import (
 	"testing"
 
-	envoy_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	envoy_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	envoy_cluster_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/cluster/v3"
+	envoy_discovery_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/discovery/v3"
 	projcontour "github.com/projectcontour/contour/apis/projectcontour/v1"
 	"github.com/projectcontour/contour/apis/projectcontour/v1alpha1"
 	"github.com/projectcontour/contour/internal/dag"

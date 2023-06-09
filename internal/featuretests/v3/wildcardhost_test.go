@@ -18,10 +18,10 @@ import (
 
 	contour_api_v1 "github.com/projectcontour/contour/apis/projectcontour/v1"
 
-	envoy_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	envoy_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	envoy_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	envoy_listener_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/listener/v3"
+	envoy_route_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/route/v3"
+	envoy_discovery_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/discovery/v3"
+	matcher "github.com/envoyproxy/go-control-plane/api/envoy/type/matcher/v3"
 	envoy_v3 "github.com/projectcontour/contour/internal/envoy/v3"
 	"github.com/projectcontour/contour/internal/featuretests"
 	"github.com/projectcontour/contour/internal/fixture"

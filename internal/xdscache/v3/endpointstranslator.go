@@ -18,7 +18,7 @@ import (
 	"sort"
 	"sync"
 
-	envoy_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	envoy_endpoint_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/endpoint/v3"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/projectcontour/contour/internal/contour"
 	"github.com/projectcontour/contour/internal/dag"

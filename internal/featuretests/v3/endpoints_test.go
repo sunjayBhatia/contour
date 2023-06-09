@@ -16,8 +16,8 @@ package v3
 import (
 	"testing"
 
-	envoy_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
-	envoy_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	envoy_endpoint_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/endpoint/v3"
+	envoy_discovery_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/discovery/v3"
 	contour_api_v1 "github.com/projectcontour/contour/apis/projectcontour/v1"
 	envoy_v3 "github.com/projectcontour/contour/internal/envoy/v3"
 	"github.com/projectcontour/contour/internal/featuretests"

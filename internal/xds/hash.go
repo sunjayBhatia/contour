@@ -14,7 +14,7 @@
 package xds
 
 import (
-	envoy_config_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_config_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/core/v3"
 )
 
 // nolint:revive

@@ -14,7 +14,7 @@
 package v3
 
 import (
-	envoy_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	envoy_tls_v3 "github.com/envoyproxy/go-control-plane/api/envoy/extensions/transport_sockets/tls/v3"
 )
 
 func ParseTLSVersion(version string) envoy_tls_v3.TlsParameters_TlsProtocol {

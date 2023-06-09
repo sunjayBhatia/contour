@@ -2,8 +2,13 @@ module github.com/projectcontour/contour
 
 go 1.19
 
-// remove once https://github.com/cert-manager/cert-manager/issues/5953 is fixed
-replace github.com/Venafi/vcert/v4 => github.com/jetstack/vcert/v4 v4.9.6-0.20230127103832-3aa3dfd6613d
+replace (
+	// remove once https://github.com/cert-manager/cert-manager/issues/5953 is fixed
+	github.com/Venafi/vcert/v4 => github.com/jetstack/vcert/v4 v4.9.6-0.20230127103832-3aa3dfd6613d
+
+	github.com/envoyproxy/go-control-plane => github.com/sunjayBhatia/go-control-plane v0.9.10-0.20230609160027-d6eb72ac5ee4
+	github.com/envoyproxy/go-control-plane/api => github.com/sunjayBhatia/go-control-plane/api v0.0.0-20230609160027-d6eb72ac5ee4
+)
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
@@ -14,6 +19,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/envoyproxy/go-control-plane v0.11.1
+	github.com/envoyproxy/go-control-plane/api v0.11.1
 	github.com/go-logr/logr v1.2.4
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-github/v48 v48.2.0
@@ -33,7 +39,7 @@ require (
 	go.uber.org/automaxprocs v1.5.2
 	golang.org/x/oauth2 v0.8.0
 	gonum.org/v1/plot v0.13.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230526203410-71b5a4ffd15e
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -56,7 +62,7 @@ require (
 	github.com/census-instrumentation/opencensus-proto v0.4.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chigopher/pathlib v1.0.0 // indirect
-	github.com/cncf/xds/go v0.0.0-20230428030218-4003588d1b74 // indirect
+	github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.1 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
@@ -128,7 +134,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230526203410-71b5a4ffd15e // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20230526203410-71b5a4ffd15e // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

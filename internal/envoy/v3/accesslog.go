@@ -14,10 +14,10 @@
 package v3
 
 import (
-	envoy_accesslog_v3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
-	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_file_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
-	envoy_req_without_query_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/req_without_query/v3"
+	envoy_accesslog_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/accesslog/v3"
+	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/core/v3"
+	envoy_file_v3 "github.com/envoyproxy/go-control-plane/api/envoy/extensions/access_loggers/file/v3"
+	envoy_req_without_query_v3 "github.com/envoyproxy/go-control-plane/api/envoy/extensions/formatter/req_without_query/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	contour_api_v1alpha1 "github.com/projectcontour/contour/apis/projectcontour/v1alpha1"
 	"github.com/projectcontour/contour/internal/protobuf"

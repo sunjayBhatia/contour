@@ -14,13 +14,13 @@
 package v3
 
 import (
-	envoy_service_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
-	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	envoy_service_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
-	envoy_service_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
-	envoy_service_route_v3 "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
-	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
-	envoy_service_secret_v3 "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
+	envoy_service_cluster_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/cluster/v3"
+	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/discovery/v3"
+	envoy_service_endpoint_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/endpoint/v3"
+	envoy_service_listener_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/listener/v3"
+	envoy_service_route_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/route/v3"
+	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/runtime/v3"
+	envoy_service_secret_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/secret/v3"
 	"google.golang.org/grpc"
 )
 

@@ -16,12 +16,12 @@ package v3
 import (
 	"testing"
 
-	envoy_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	ratelimit_config_v3 "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
-	envoy_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	ratelimit_filter_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
-	http "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	envoy_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	envoy_core_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/core/v3"
+	ratelimit_config_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/ratelimit/v3"
+	envoy_route_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/route/v3"
+	ratelimit_filter_v3 "github.com/envoyproxy/go-control-plane/api/envoy/extensions/filters/http/ratelimit/v3"
+	http "github.com/envoyproxy/go-control-plane/api/envoy/extensions/filters/network/http_connection_manager/v3"
+	envoy_discovery_v3 "github.com/envoyproxy/go-control-plane/api/envoy/service/discovery/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	contour_api_v1 "github.com/projectcontour/contour/apis/projectcontour/v1"
 	contour_api_v1alpha1 "github.com/projectcontour/contour/apis/projectcontour/v1alpha1"

@@ -14,7 +14,7 @@
 package v3
 
 import (
-	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	matcher "github.com/envoyproxy/go-control-plane/api/envoy/type/matcher/v3"
 )
 
 // SafeRegexMatch returns a matcher.RegexMatcher for the supplied regex.

@@ -17,12 +17,12 @@ import (
 	"sort"
 	"strings"
 
-	envoy_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	envoy_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
-	envoy_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	envoy_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	tcp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
-	envoy_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	envoy_cluster_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/cluster/v3"
+	envoy_endpoint_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/endpoint/v3"
+	envoy_listener_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/listener/v3"
+	envoy_route_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/route/v3"
+	tcp "github.com/envoyproxy/go-control-plane/api/envoy/extensions/filters/network/tcp_proxy/v3"
+	envoy_tls_v3 "github.com/envoyproxy/go-control-plane/api/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/projectcontour/contour/internal/dag"
 )
 

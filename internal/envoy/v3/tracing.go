@@ -14,10 +14,10 @@
 package v3
 
 import (
-	envoy_config_trace_v3 "github.com/envoyproxy/go-control-plane/envoy/config/trace/v3"
-	http "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	envoy_trace_v3 "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v3"
-	envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	envoy_config_trace_v3 "github.com/envoyproxy/go-control-plane/api/envoy/config/trace/v3"
+	http "github.com/envoyproxy/go-control-plane/api/envoy/extensions/filters/network/http_connection_manager/v3"
+	envoy_trace_v3 "github.com/envoyproxy/go-control-plane/api/envoy/type/tracing/v3"
+	envoy_type "github.com/envoyproxy/go-control-plane/api/envoy/type/v3"
 	"github.com/projectcontour/contour/internal/dag"
 	"github.com/projectcontour/contour/internal/protobuf"
 	"github.com/projectcontour/contour/internal/timeout"

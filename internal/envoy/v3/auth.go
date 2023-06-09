@@ -14,9 +14,9 @@
 package v3
 
 import (
-	envoy_api_v3_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_v3_tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
-	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	envoy_api_v3_core "github.com/envoyproxy/go-control-plane/api/envoy/config/core/v3"
+	envoy_v3_tls "github.com/envoyproxy/go-control-plane/api/envoy/extensions/transport_sockets/tls/v3"
+	matcher "github.com/envoyproxy/go-control-plane/api/envoy/type/matcher/v3"
 	"github.com/projectcontour/contour/internal/dag"
 	"github.com/projectcontour/contour/internal/envoy"
 	"google.golang.org/protobuf/types/known/wrapperspb"
