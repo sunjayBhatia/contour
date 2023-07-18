@@ -186,14 +186,14 @@ func (s *StatusAddressUpdater) OnAdd(obj any, isInInitialList bool) {
 				}
 
 				if ip := loadBalancerStatus.Ingress[0].IP; len(ip) > 0 {
-					dco.Status.Addresses = []gatewayapi_v1beta1.GatewayAddress{
+					dco.Status.Addresses = []gatewayapi_v1beta1.GatewayStatusAddress{
 						{
 							Type:  ref.To(gatewayapi_v1beta1.IPAddressType),
 							Value: ip,
 						},
 					}
 				} else if hostname := loadBalancerStatus.Ingress[0].Hostname; len(hostname) > 0 {
-					dco.Status.Addresses = []gatewayapi_v1beta1.GatewayAddress{
+					dco.Status.Addresses = []gatewayapi_v1beta1.GatewayStatusAddress{
 						{
 							Type:  ref.To(gatewayapi_v1beta1.HostnameAddressType),
 							Value: hostname,
