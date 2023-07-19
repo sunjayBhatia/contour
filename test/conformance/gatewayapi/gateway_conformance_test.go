@@ -28,9 +28,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	conformance_v1alpha1 "sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/yaml"
 )
 
 func TestGatewayConformance(t *testing.T) {
@@ -48,28 +50,50 @@ func TestGatewayConformance(t *testing.T) {
 	require.NoError(t, v1alpha2.AddToScheme(client.Scheme()))
 	require.NoError(t, v1beta1.AddToScheme(client.Scheme()))
 
-	cSuite := suite.New(suite.Options{
-		Client: client,
-		// This clientset is needed in addition to the client only because
-		// controller-runtime client doesn't support non CRUD sub-resources yet (https://github.com/kubernetes-sigs/controller-runtime/issues/452).
-		Clientset:                  clientset,
-		GatewayClassName:           *flags.GatewayClassName,
-		Debug:                      *flags.ShowDebug,
-		CleanupBaseResources:       *flags.CleanupBaseResources,
-		EnableAllSupportedFeatures: true,
-		// Keep the list of skipped features in sync with
-		// test/scripts/run-gateway-conformance.sh.
-		SkipTests: []string{
-			// Checks for the original request port in the returned Location
-			// header which Envoy is stripping.
-			// See: https://github.com/envoyproxy/envoy/issues/17318
-			tests.HTTPRouteRedirectPortAndScheme.ShortName,
+	cSuite, err := suite.NewExperimentalConformanceTestSuite(suite.ExperimentalConformanceOptions{
+		Options: suite.Options{
+			Client: client,
+			// This clientset is needed in addition to the client only because
+			// controller-runtime client doesn't support non CRUD sub-resources yet (https://github.com/kubernetes-sigs/controller-runtime/issues/452).
+			Clientset:            clientset,
+			GatewayClassName:     *flags.GatewayClassName,
+			Debug:                *flags.ShowDebug,
+			CleanupBaseResources: *flags.CleanupBaseResources,
+			// EnableAllSupportedFeatures: true,
+			SupportedFeatures: suite.AllFeatures.Delete(suite.MeshCoreFeatures.UnsortedList()...),
+			// Keep the list of skipped features in sync with
+			// test/scripts/run-gateway-conformance.sh.
+			SkipTests: []string{
+				// Checks for the original request port in the returned Location
+				// header which Envoy is stripping.
+				// See: https://github.com/envoyproxy/envoy/issues/17318
+				tests.HTTPRouteRedirectPortAndScheme.ShortName,
+			},
+			// ExemptFeatures: sets.New(
+			// 	suite.SupportMesh,
+			// ),
 		},
-		ExemptFeatures: sets.New(
-			suite.SupportMesh,
+		Implementation: conformance_v1alpha1.Implementation{
+			Organization: "projectcontour",
+			Project:      "contour",
+			URL:          "https://github.com/projectcontour/contour",
+			Version:      "",
+			Contact: []string{
+				"@projectcontour/maintainers",
+			},
+		},
+		ConformanceProfiles: sets.New(
+			suite.HTTPConformanceProfileName,
+			suite.TLSConformanceProfileName,
 		),
 	})
+	require.NoError(t, err)
 	cSuite.Setup(t)
-	cSuite.Run(t, tests.ConformanceTests)
-
+	err = cSuite.Run(t, tests.ConformanceTests)
+	require.NoError(t, err)
+	report, err := cSuite.Report()
+	require.NoError(t, err)
+	r, err := yaml.Marshal(report)
+	require.NoError(t, err)
+	t.Logf("Conformance report \n%s\n", string(r))
 }
