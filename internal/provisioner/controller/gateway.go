@@ -204,6 +204,11 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			*address.Type == gatewayapi_v1beta1.IPAddressType ||
 			*address.Type == gatewayapi_v1beta1.HostnameAddressType {
 			contourModel.Spec.NetworkPublishing.Envoy.LoadBalancer.LoadBalancerIP = address.Value
+		} else {
+			if err := r.setAcceptedCondition(ctx, gateway, metav1.ConditionFalse, gatewayapi_v1.GatewayReasonUnsupportedAddress, fmt.Sprintf("Address type %q not supported", *address.Type)); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to set gateway %s Accepted condition: %w", gateway.Name, err)
+			}
+			return ctrl.Result{}, nil
 		}
 	}
 
@@ -384,11 +389,36 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, fmt.Errorf("failed to ensure resources for gateway: %w", retryable.NewMaybeRetryableAggregate(errs))
 	}
 
+	if err := r.setAcceptedCondition(ctx, gateway, metav1.ConditionTrue, gatewayapi_v1.GatewayReasonAccepted, "Gateway is accepted"); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to set gateway %s Accepted condition: %w", gateway.Name, err)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *gatewayReconciler) setAcceptedCondition(
+	ctx context.Context,
+	gateway *gatewayapi_v1beta1.Gateway,
+	status metav1.ConditionStatus,
+	reason gatewayapi_v1.GatewayConditionReason,
+	message string,
+) error {
+	currentAcceptedCondition := metav1.Condition{
+		Type:               string(gatewayapi_v1.GatewayConditionAccepted),
+		Status:             status,
+		ObservedGeneration: gateway.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(reason),
+		Message:            message,
+	}
 	var newConds []metav1.Condition
 	for _, cond := range gateway.Status.Conditions {
 		if cond.Type == string(gatewayapi_v1.GatewayConditionAccepted) {
-			if cond.Status == metav1.ConditionTrue {
-				return ctrl.Result{}, nil
+			if cond.Status == status {
+				// If status hasn't changed, don't change the condition, just
+				// update the generation.
+				currentAcceptedCondition = cond
+				currentAcceptedCondition.ObservedGeneration = gateway.Generation
 			}
 
 			continue
@@ -397,23 +427,16 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		newConds = append(newConds, cond)
 	}
 
-	log.Info("setting gateway's Accepted condition to true")
+	r.log.WithValues("gateway-name", gateway.Name).Info(fmt.Sprintf("setting gateway's Accepted condition to %s", status))
 
 	// nolint:gocritic
-	gateway.Status.Conditions = append(newConds, metav1.Condition{
-		Type:               string(gatewayapi_v1.GatewayConditionAccepted),
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: gateway.Generation,
-		LastTransitionTime: metav1.Now(),
-		Reason:             string(gatewayapi_v1.GatewayReasonAccepted),
-		Message:            "Gateway is accepted",
-	})
+	gateway.Status.Conditions = append(newConds, currentAcceptedCondition)
 
 	if err := r.client.Status().Update(ctx, gateway); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to set gateway %s Accepted condition: %w", req, err)
+		return err
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *gatewayReconciler) ensureContour(ctx context.Context, contour *model.Contour, log logr.Logger) []error {

@@ -280,7 +280,7 @@ func TestGatewayReconcile(t *testing.T) {
 				assertEnvoyServiceLoadBalancerIP(t, gw, r.client, "projectcontour.io")
 			},
 		},
-		"A gateway with one custom address type results in an Envoy service with no loadBalancerIP": {
+		"A gateway with one custom address type results in Gateway status set to Accepted: False": {
 			gatewayClass: reconcilableGatewayClass("gatewayclass-1", controller),
 			gateway: makeGatewayWithAddrs([]gatewayv1beta1.GatewayAddress{
 				{
@@ -290,7 +290,12 @@ func TestGatewayReconcile(t *testing.T) {
 			}),
 			assertions: func(t *testing.T, r *gatewayReconciler, gw *gatewayv1beta1.Gateway, reconcileErr error) {
 				require.NoError(t, reconcileErr)
-				assertEnvoyServiceLoadBalancerIP(t, gw, r.client, "")
+
+				// Verify the Gateway has a "Accepted: False" condition
+				require.NoError(t, r.client.Get(context.Background(), keyFor(gw), gw))
+				require.Len(t, gw.Status.Conditions, 1)
+				assert.Equal(t, string(gatewayapi_v1.GatewayConditionAccepted), gw.Status.Conditions[0].Type)
+				assert.Equal(t, metav1.ConditionFalse, gw.Status.Conditions[0].Status)
 			},
 		},
 		"Config from the Gateway's GatewayClass params is applied to the provisioned ContourConfiguration": {
