@@ -24,6 +24,7 @@ import (
 
 	"github.com/bombsimon/logrusr/v4"
 	"github.com/distribution/reference"
+	"github.com/projectcontour/contour/internal/ref"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -84,11 +85,23 @@ func TestGatewayConformance(t *testing.T) {
 			// but there are some negative cases that aren't fully
 			// implemented plus complications with the test setup itself.
 			// See: https://github.com/projectcontour/contour/issues/5922
-			tests.GatewayStaticAddresses.ShortName,
+			// tests.GatewayStaticAddresses.ShortName,
 		},
 		ExemptFeatures: sets.New(
 			suite.SupportMesh,
 		),
+		UsableNetworkAddresses: []v1.GatewayAddress{
+			{
+				Type:  ref.To(v1.IPAddressType),
+				Value: "1.1.1.1",
+			},
+		},
+		UnusableNetworkAddresses: []v1.GatewayAddress{
+			{
+				Type:  ref.To(v1.IPAddressType),
+				Value: "172.18.255.249",
+			},
+		},
 	}
 	if os.Getenv("GENERATE_GATEWAY_CONFORMANCE_REPORT") == "true" {
 		reportDir, ok := os.LookupEnv("GATEWAY_CONFORMANCE_REPORT_OUTDIR")

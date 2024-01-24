@@ -305,6 +305,22 @@ type NetworkPublishing struct {
 	//
 	// +optional
 	ServiceAnnotations map[string]string `json:"serviceAnnotations,omitempty"`
+
+	AllowedAddresses []AllowedAddress
+}
+
+type AllowedAddressType string
+
+const (
+	AllowedAddressTypeAddress AllowedAddressType = "Address"
+
+	AllowedAddressTypeIPRange AllowedAddressType = "IPRange"
+)
+
+type AllowedAddress struct {
+	Type AllowedAddressType
+
+	Value string
 }
 
 // NetworkPublishingType is a way to publish network endpoints.

@@ -27,6 +27,7 @@ import (
 	"github.com/projectcontour/contour/internal/provisioner/objects/secret"
 	"github.com/projectcontour/contour/internal/provisioner/objects/service"
 	retryable "github.com/projectcontour/contour/internal/provisioner/retryableerror"
+	"github.com/projectcontour/contour/internal/ref"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -197,8 +198,9 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Currently, only a single address of type IPAddress or Hostname
 	// is supported; anything else will be ignored.
+	var address *gatewayapi_v1.GatewayAddress
 	if len(gateway.Spec.Addresses) > 0 {
-		address := gateway.Spec.Addresses[0]
+		address = ref.To(gateway.Spec.Addresses[0])
 
 		if address.Type == nil ||
 			*address.Type == gatewayapi_v1beta1.IPAddressType ||
@@ -305,9 +307,31 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 					contourModel.Spec.NetworkPublishing.Envoy.Type = networkPublishing.Type
 				}
 
-				if networkPublishing.Type == contour_api_v1alpha1.NodePortServicePublishingType {
-					// when the NetworkPublishingType is 'NodePortServicePublishingType',
-					// the gateway.Spec.Listeners' port will be used to set 'NodePort' in addition to 'ServicePort'
+				switch networkPublishing.Type {
+				// If not specified, default is LoadBalancerService
+				case "", contour_api_v1alpha1.LoadBalancerServicePublishingType:
+					// Validate chosen address is in the allowed address set.
+					// If no Gateway.spec.address requested, skip this.
+					if address == nil {
+						break
+					}
+					allowed := false
+					for _, allowedAddress := range networkPublishing.AllowedAddresses {
+						switch allowedAddress.Type {
+						case contour_api_v1alpha1.AllowedAddressTypeAddress:
+							// Selected address must match specific address exactly.
+							if allowedAddress.Value == address.Value {
+								allowed = true
+							}
+						case contour_api_v1alpha1.AllowedAddressTypeIPRange:
+							// TODO:
+						}
+					}
+					if !allowed {
+						// Set Programmed: False
+					}
+				case contour_api_v1alpha1.NodePortServicePublishingType:
+					// The gateway.Spec.Listeners' port will be used to set 'NodePort' in addition to 'ServicePort'
 					for i := range contourModel.Spec.NetworkPublishing.Envoy.Ports {
 						port := &contourModel.Spec.NetworkPublishing.Envoy.Ports[i]
 						port.NodePort = port.ServicePort

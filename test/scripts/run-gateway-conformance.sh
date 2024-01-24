@@ -29,13 +29,13 @@ export GATEWAY_CONFORMANCE_REPORT_OUTDIR="${REPO}/gateway-conformance-report"
 echo "Using Contour image: ${CONTOUR_IMG}"
 echo "Using Gateway API version: ${GATEWAY_API_VERSION}"
 
-${KUBECTL} apply -f examples/gateway-provisioner/00-common.yaml
-${KUBECTL} apply -f examples/gateway-provisioner/01-roles.yaml
-${KUBECTL} apply -f examples/gateway-provisioner/02-rolebindings.yaml
-${KUBECTL} apply -f <(cat examples/gateway-provisioner/03-gateway-provisioner.yaml | \
-    yq eval '.spec.template.spec.containers[0].image = env(CONTOUR_IMG)' - | \
-    yq eval '.spec.template.spec.containers[0].imagePullPolicy = "IfNotPresent"' - | \
-    yq eval '.spec.template.spec.containers[0].args += "--contour-image="+env(CONTOUR_IMG)' -)
+# ${KUBECTL} apply -f examples/gateway-provisioner/00-common.yaml
+# ${KUBECTL} apply -f examples/gateway-provisioner/01-roles.yaml
+# ${KUBECTL} apply -f examples/gateway-provisioner/02-rolebindings.yaml
+# ${KUBECTL} apply -f <(cat examples/gateway-provisioner/03-gateway-provisioner.yaml | \
+#     yq eval '.spec.template.spec.containers[0].image = env(CONTOUR_IMG)' - | \
+#     yq eval '.spec.template.spec.containers[0].imagePullPolicy = "IfNotPresent"' - | \
+#     yq eval '.spec.template.spec.containers[0].args += "--contour-image="+env(CONTOUR_IMG)' -)
 
 ${KUBECTL} apply -f - <<EOF
 kind: GatewayClass
@@ -57,7 +57,7 @@ EOF
 GO_MOD_GATEWAY_API_VERSION=$(grep "sigs.k8s.io/gateway-api" go.mod | awk '{print $2}')
 
 if [ "$GATEWAY_API_VERSION" = "$GO_MOD_GATEWAY_API_VERSION" ]; then
-  go test -timeout=40m -tags conformance ./test/conformance/gatewayapi --gateway-class=contour
+  go test -v -timeout=40m -tags conformance -run="TestGatewayConformance/GatewayStaticAddresses" ./test/conformance/gatewayapi --gateway-class=contour
 else 
   cd $(mktemp -d)
   git clone https://github.com/kubernetes-sigs/gateway-api

@@ -217,7 +217,7 @@ func TestDAGInsertGatewayAPI(t *testing.T) {
 		},
 	}
 
-	gatewayHTTPWithAddresses := &gatewayapi_v1beta1.Gateway{
+	gatewayHTTPWithAddressesNoStatus := &gatewayapi_v1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "contour",
 			Namespace: "projectcontour",
@@ -240,6 +240,40 @@ func TestDAGInsertGatewayAPI(t *testing.T) {
 					},
 				},
 			}},
+		},
+	}
+
+	gatewayHTTPWithAddressesInStatus := &gatewayapi_v1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "contour",
+			Namespace: "projectcontour",
+		},
+		Spec: gatewayapi_v1beta1.GatewaySpec{
+			GatewayClassName: gatewayapi_v1beta1.ObjectName(validClass.Name),
+			Addresses: []gatewayapi_v1beta1.GatewayAddress{
+				{
+					Type:  ref.To(gatewayapi_v1beta1.IPAddressType),
+					Value: "1.2.3.4",
+				},
+			},
+			Listeners: []gatewayapi_v1beta1.Listener{{
+				Name:     "http",
+				Port:     80,
+				Protocol: gatewayapi_v1.HTTPProtocolType,
+				AllowedRoutes: &gatewayapi_v1beta1.AllowedRoutes{
+					Namespaces: &gatewayapi_v1beta1.RouteNamespaces{
+						From: ref.To(gatewayapi_v1.NamespacesFromAll),
+					},
+				},
+			}},
+		},
+		Status: gatewayapi_v1.GatewayStatus{
+			Addresses: []gatewayapi_v1.GatewayStatusAddress{
+				{
+					Type:  ref.To(gatewayapi_v1beta1.IPAddressType),
+					Value: "1.2.3.4",
+				},
+			},
 		},
 	}
 
@@ -309,6 +343,83 @@ func TestDAGInsertGatewayAPI(t *testing.T) {
 					},
 				},
 			}},
+		},
+	}
+
+	gatewayNotAccepted := &gatewayapi_v1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "contour",
+			Namespace: "projectcontour",
+		},
+		Spec: gatewayapi_v1beta1.GatewaySpec{
+			GatewayClassName: gatewayapi_v1beta1.ObjectName(validClass.Name),
+			Addresses: []gatewayapi_v1beta1.GatewayAddress{
+				{
+					// Gateways can be set to Accepted: False if the requested address is
+					// of an unrecognized type.
+					Type:  ref.To(gatewayapi_v1.AddressType("foo.example.com/SomeType")),
+					Value: "1.2.3.4",
+				},
+			},
+			Listeners: []gatewayapi_v1beta1.Listener{{
+				Name:     "http",
+				Port:     80,
+				Protocol: gatewayapi_v1.HTTPProtocolType,
+				AllowedRoutes: &gatewayapi_v1beta1.AllowedRoutes{
+					Namespaces: &gatewayapi_v1beta1.RouteNamespaces{
+						From: ref.To(gatewayapi_v1.NamespacesFromAll),
+					},
+				},
+			}},
+		},
+		Status: gatewayapi_v1.GatewayStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:   string(gatewayapi_v1.GatewayConditionAccepted),
+					Status: metav1.ConditionFalse,
+					Reason: string(gatewayapi_v1.GatewayReasonUnsupportedAddress),
+				},
+			},
+		},
+	}
+
+	gatewayNotProgrammed := &gatewayapi_v1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "contour",
+			Namespace: "projectcontour",
+		},
+		Spec: gatewayapi_v1beta1.GatewaySpec{
+			GatewayClassName: gatewayapi_v1beta1.ObjectName(validClass.Name),
+			Addresses: []gatewayapi_v1beta1.GatewayAddress{
+				{
+					// Gateways can be set to Programmed: False if the requested address is
+					// not usable.
+					Type:  ref.To(gatewayapi_v1.IPAddressType),
+					Value: "0.0.0.0",
+				},
+			},
+			Listeners: []gatewayapi_v1beta1.Listener{{
+				Name:     "http",
+				Port:     80,
+				Protocol: gatewayapi_v1.HTTPProtocolType,
+				AllowedRoutes: &gatewayapi_v1beta1.AllowedRoutes{
+					Namespaces: &gatewayapi_v1beta1.RouteNamespaces{
+						From: ref.To(gatewayapi_v1.NamespacesFromAll),
+					},
+				},
+			}},
+		},
+		Status: gatewayapi_v1.GatewayStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:   string(gatewayapi_v1.GatewayConditionAccepted),
+					Status: metav1.ConditionTrue,
+				},
+				{
+					Type:   string(gatewayapi_v1.GatewayConditionProgrammed),
+					Status: metav1.ConditionFalse,
+				},
+			},
 		},
 	}
 
@@ -493,9 +604,43 @@ func TestDAGInsertGatewayAPI(t *testing.T) {
 				},
 			),
 		},
-		"gateway with addresses is unsupported": {
+		"gateway not accepted": {
 			gatewayclass: validClass,
-			gateway:      gatewayHTTPWithAddresses,
+			gateway:      gatewayNotAccepted,
+			objs: []any{
+				kuardService,
+				basicHTTPRoute,
+			},
+			want: listeners(),
+		},
+		"gateway with addresses not set in status": {
+			gatewayclass: validClass,
+			gateway:      gatewayHTTPWithAddressesNoStatus,
+			objs: []any{
+				kuardService,
+				basicHTTPRoute,
+			},
+			want: listeners(),
+		},
+		"gateway with addresses set in status": {
+			gatewayclass: validClass,
+			gateway:      gatewayHTTPWithAddressesInStatus,
+			objs: []any{
+				kuardService,
+				basicHTTPRoute,
+			},
+			want: listeners(
+				&Listener{
+					Name: "http-80",
+					VirtualHosts: virtualhosts(
+						virtualhost("test.projectcontour.io", prefixrouteHTTPRoute("/", service(kuardService))),
+					),
+				},
+			),
+		},
+		"gateway not programmed": {
+			gatewayclass: validClass,
+			gateway:      gatewayNotProgrammed,
 			objs: []any{
 				kuardService,
 				basicHTTPRoute,
